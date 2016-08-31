@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ STATIC_URL}}bootstrap/css/bootstrap.min.css" />
+    <style type="text/css">
+    nav { font-size:20px;color:#fff; padding-top:9px;padding-left:40px; }
+    </style>
+    <title>Articles Index</title>
+</head>
+<body>
+    <nav class="navbar navbar-inverse">
+        {%  if request.user.is_authenticated %}
+        		|<a href="">文章1</a> |
+       		 <a href="">文章2</a> |
+             <a href="/articles/login/">退出登录</a>|
+             <a href="/articles/register/">用户注册</a>|
+             {{ request.user }}
+
+        {% else %}
+            <a href="/articles/login/">用户登录</a>|
+            <a href="/articles/register/">用户注册</a>|
+        {% endif %}
+    </nav>
+<h2>精品文章</h2>
+阅读，是一种习惯。
+</body>
+</html>

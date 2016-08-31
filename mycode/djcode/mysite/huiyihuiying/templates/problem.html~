@@ -1,0 +1,90 @@
+{% extends "base1.html"%}
+
+{% block div %}
+<div class="con wid">
+
+        <div class="weizhi list_weizhi">
+
+                          <a href="../../index.html" class="first">首页<i></i></a>
+
+                           
+
+                          <a href="index.html"><b></b>常见问题<i></i></a>
+
+                        </div>
+
+		<h2>常见问题</h2>
+
+       
+
+          
+
+		<div class="text1 clearfix">
+
+                <h2>
+
+                <span>慧影医疗</span>
+
+                <a href="../../article/7/index.html">远程医疗常见问题</a></h2>
+
+				<div class="tu"><a href="../../article/7/index.html"><img src="http://weixin.huiyihuiying.com/media/uploads/40b1af7a-7258-11e5-b799-00163e00632c.jpg" ></a></div>
+
+				<div class="text">
+
+						<p><a href="../../article/7/index.html" class="list_a1">远程医疗常见问题</a><br><a href="../../article/7/index.html" class="list_a2">阅读全文></a></p>
+
+                        <div class="clearfix"><span>汇医慧影</span><strong class="riqi">2015-09-02</strong></div>	
+
+				</div>
+
+		</div>
+
+        
+
+		<div class="text1 clearfix">
+
+                <h2>
+
+                <span>慧影医疗</span>
+
+                <a href="../../article/6/index.html">汇医慧影患者常见问题</a></h2>
+
+				<div class="tu"><a href="../../article/6/index.html"><img src="http://weixin.huiyihuiying.com/media/uploads/91d5b810-7258-11e5-b799-00163e00632c.jpg" ></a></div>
+
+				<div class="text">
+
+						<p><a href="../../article/6/index.html" class="list_a1">汇医慧影患者常见问题</a><br><a href="../../article/6/index.html" class="list_a2">阅读全文></a></p>
+
+                        <div class="clearfix"><span>汇医慧影</span><strong class="riqi">2015-09-01</strong></div>	
+
+				</div>
+
+		</div>
+
+        
+
+		<div class="text1 clearfix">
+
+                <h2>
+
+                <span>慧影医疗</span>
+
+                <a href="../../article/3/index.html">汇医慧影患者常见问题</a></h2>
+
+				<div class="tu"><a href="../../article/3/index.html"><img src="http://weixin.huiyihuiying.com/media/uploads/19595cb4-725a-11e5-819f-00163e00632c.jpg" ></a></div>
+
+				<div class="text">
+
+						<p><a href="../../article/3/index.html" class="list_a1">如果您没有要求的专家，我们会根据您的病情和咨询目的，帮助您选择合适的专家咨询</a><br><a href="../../article/3/index.html" class="list_a2">阅读全文></a></p>
+
+                        <div class="clearfix"><span>汇医慧影</span><strong class="riqi">2015-09-14</strong></div>	
+
+				</div>
+
+		</div>
+
+        
+
+</div>
+
+{% endblock %}

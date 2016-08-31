@@ -1,0 +1,138 @@
+/* ::::: http://cdn.shenbian100.com/mxlm/css/index.css ::::: */
+
+html { margin: 0px; padding: 0px; width: 100%; }
+* { margin: 0px; padding: 0px; list-style: outside none none; }
+body { margin: 0px; padding: 0px; width: 100%; font: 14px/1.5 "hiragino sans gb",helvetica,arial,"microsoftYahei","微软雅黑",sans-serif; color: rgb(65, 65, 65); min-width: 960px; text-rendering: optimizelegibility; }
+img { border: medium none; }
+a { text-decoration: none; cursor: pointer; }
+hr { height: 0px; margin: 20px 0px; border-width: 1px medium medium; border-style: solid none none; border-color: #edf0f2; -moz-use-text-color -moz-use-text-color; -moz-border-top-colors: none; -moz-border-right-colors: none; -moz-border-bottom-colors: none; -moz-border-left-colors: none; border-image: none; }
+.masthead { height: 400px; overflow: hidden; background: rgb(226, 226, 226) none repeat scroll 0% 0%; position: relative; }
+.flexslider { position: relative; height: 400px; overflow: hidden; background: transparent url('loading.gif') no-repeat scroll 50% center; }
+.slides { position: relative; z-index: 1; }
+.slides li { height: 400px; }
+.flex-control-nav { position: absolute; bottom: 10px; z-index: 2; width: 100%; text-align: center; }
+.flex-control-nav li { display: inline-block; width: 14px; height: 14px; margin: 0px 5px; }
+.flex-control-nav a { display: inline-block; width: 14px; height: 14px; line-height: 40px; overflow: hidden; background: transparent url(../images/dot.png) no-repeat scroll right 0px; cursor: pointer; }
+.flex-control-nav .flex-active { background-position: 0px 0px; }
+.propagation { height: 240px; background: rgb(255, 255, 255) none repeat scroll 0% 0%; position: relative; z-index: 1; }
+.propagation .p { float: left; width: 220px; margin-right: 20px; padding-top: 130px; background-position: center 17px; background-repeat: no-repeat; }
+.propagation .p h1 { margin: 0px 0px 10px; font-size: 18px; line-height: 1em; text-align: center; }
+.propagation .p p { padding: 0px 15px; margin: 0px; text-align: center; }
+.propagation .p.p0 { background-image: url(../images/propagation0.png); }
+.propagation .p.p1 { background-image: url(../images/propagation1.png); }
+.propagation .p.p2 { background-image: url(../images/propagation2.png); }
+.propagation .p.p3 { background-image: url(../images/propagation3.png); margin-right: 0px; }
+.recom { background: rgb(247, 247, 247) none repeat scroll 0% 0%; padding: 10px 0px; }
+.recom-inner { width: 980px; padding: 10px 0px 0px; }
+.recom h1 { margin: 0px 0px 20px 20px; line-height: 1em; font-size: 20px; border-left: 4px solid rgb(43, 161, 125); padding-left: 5px; }
+.recom .recom-block { float: left; width: 240px; margin: 0px 0px 20px 20px; padding: 20px 30px; border-bottom: 1px solid rgb(237, 240, 242); position: relative; overflow: hidden; color: rgb(68, 68, 68); background: rgb(255, 255, 255) none repeat scroll 0% 0%; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.15); cursor: pointer; transition: all 0.1s linear 0s; }
+.recom .recom-block:hover { color: rgb(68, 68, 68); text-decoration: none; box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.3); }
+.recom .recom-block:active { position: relative; top: 1px; box-shadow: 0px 2px 3px rgba(0, 0, 0, 0.2); }
+.recom .recom-block h2 { font-size: 18px; line-height: 1em; margin: 15px 0px; }
+.recom .recom-block h2 i { padding-left: 20px; margin: 3px; background: transparent url('v.png') no-repeat scroll center center; }
+.recom .recom-block h2 span { font-size: 14px; color: rgb(145, 145, 145); font-weight: normal; }
+.recom .recom-block p { margin: 0px; }
+.recom .recom-block p.university { font-weight: bold; }
+.recom .recom-block p.tag { line-height: 36px; overflow: hidden; }
+.recom .recom-block p.tag span { display: inline-block; height: 18px; line-height: 18px; padding: 0px 10px; margin: 5px 3px; font-size: 12px; color: rgb(43, 161, 125); border: 1px solid rgb(43, 161, 125); border-radius: 3px; }
+.sttop { height: 50px; background-color: rgb(43, 161, 125); width: 940px; margin: auto; box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.3); color: rgb(255, 255, 255); font-size: 20px; line-height: 50px; text-align: center; }
+.stlist { width: 900px; background-color: rgb(255, 255, 255); margin: 0px auto 30px; box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.3); padding: 20px; }
+.yqlink { width: 800px; margin: 20px auto 0px; padding: 0px 0px 0px 120px; }
+.yqlink a { color: rgb(153, 153, 153); text-decoration: none; }
+.wrap { width: 980px; margin: 10px auto; }
+.clearfix { clear: both; }
+.btn { display: inline-block; width: 100px; height: 32px; line-height: 32px; font-size: 14px; text-align: center; cursor: pointer; border-width: 1px; border-style: solid; border-radius: 4px; text-decoration: none; }
+.btn1 { display: inline-block; width: 70px; height: 28px; line-height: 28px; font-size: 12px; text-align: center; cursor: pointer; border-width: 1px; border-style: solid; border-radius: 4px; text-decoration: none; }
+.btn:hover { text-decoration: none; }
+.btn1:hover { text-decoration: none; }
+.btn:active { transform: translateY(1px); }
+.btn.g { background: rgb(33, 196, 140) none repeat scroll 0% 0%; border-color: rgb(33, 196, 140); color: rgb(255, 255, 255); }
+.btn.g:hover { background: rgb(43, 161, 125) none repeat scroll 0% 0%; border-color: rgb(43, 161, 125); }
+.btn1.g { background: rgb(33, 196, 140) none repeat scroll 0% 0%; border-color: rgb(33, 196, 140); color: rgb(255, 255, 255); }
+.btn1.g:hover { background: rgb(43, 161, 125) none repeat scroll 0% 0%; border-color: rgb(43, 161, 125); }
+#header { position: relative; height: 80px; border-top: 8px solid rgb(43, 161, 125); background: rgb(255, 255, 255) none repeat scroll 0% 0%; text-align: right; z-index: 1; }
+#header .brand { margin: 6px 0px; height: 48px; line-height: 48px; }
+#header .action, #header .user, #header .login { margin: 13px 0px; height: 34px; line-height: 34px; }
+#header .brand { float: left; text-align: left; width: 310px; }
+#header .action { display: inline-block; text-align: center; width: 216px; }
+#header .login { display: inline-block; margin-left: 10px; width: 230px; }
+#header .brand .logo { width: 300px; }
+#footer { background: rgb(79, 83, 86) none repeat scroll 0% 0%; padding: 30px 0px 35px; }
+#footer .logo { display: block; float: left; width: 130px; height: 38px; margin: 0px 20px 0px 0px; background: rgb(79, 83, 86) url(../images/logo-footer.png) no-repeat scroll center center; text-indent: -99999em; }
+#footer p { font-size: 12px; color: rgb(255, 255, 255); line-height: 1em; margin: 0px; padding: 4px 0px; }
+#footer p.links a { color: rgb(255, 255, 255); margin: 0px 10px 0px 0px; padding: 0px 10px 0px 0px; border-right: 1px solid rgb(255, 255, 255); }
+#footer p.links a.last { border-right: medium none; }
+#footer p.copyright a { color: rgb(255, 255, 255); margin-left: 20px; }
+#footer .sns { float: right; height: 0px; overflow: visible; position: relative; top: -35px; }
+#footer .sns a { display: inline-block; width: 30px; height: 30px; border-radius: 15px; margin-left: 20px; text-indent: -99999em; background: transparent url(../images/sns.png) no-repeat scroll 0% 0%; }
+#footer .sns a:hover { box-shadow: 0px 1px 5px rgba(0, 0, 0, 0.5); }
+#footer .sns a.weibo { background-position: left top; }
+#footer .sns a.renren { background-position: -50px top; }
+#footer .sns a.qq { background-position: -100px top; }
+.ad1 { width: 940px; height: 100px; margin: auto; }
+.tell { font-size: 18px; color: rgb(255, 102, 0); }
+.procedure_exh::after {  }
+.touxiang { width: 150px; height: 150px; border-radius: 75px; }
+#floatDivBoxs { width: 170px; background: rgb(255, 255, 255) none repeat scroll 0% 0%; position: fixed; top: 88px; right: 0px; z-index: 999; }
+#floatDivBoxs .floatDtt { width: 100%; height: 40px; line-height: 40px; background: rgb(33, 196, 140) none repeat scroll 0% 0%; color: rgb(255, 255, 255); font-size: 18px; text-indent: 22px; position: relative; }
+#floatDivBoxs .floatDqq { padding: 0px 14px; }
+#floatDivBoxs .floatDqq li { height: 45px; line-height: 45px; font-size: 15px; border-bottom: 1px solid rgb(227, 227, 227); padding: 0px 0px 0px 50px; }
+.floatShadow { background: rgb(255, 255, 255) none repeat scroll 0% 0%; border: 1px solid rgb(33, 196, 140); }
+#floatDivBoxs ul, ol { list-style: outside none none; }
+#floatDivBoxs img { border: medium none; outline: medium none; }
+#floatDivBoxs a { color: rgb(102, 102, 102); text-decoration: none; outline: medium none; }
+#floatDivBoxs a:hover { color: rgb(232, 67, 31); }
+.dh { width: 100%; height: 40px; background: rgb(41, 182, 112) none repeat scroll 0% 0%; margin: 0px auto; }
+.dh1 { width: 980px; height: 40px; background: rgb(41, 182, 112) none repeat scroll 0% 0%; margin: auto; }
+.dh1 ul li { width: 136px; height: 26px; line-height: 26px; float: left; border-right: 1px solid rgb(255, 255, 255); color: rgb(255, 255, 255); font-size: 16px; text-align: center; list-style-type: none; margin-top: 7px; }
+.dh1 ul { float: left; }
+.dh1 a { color: rgb(255, 255, 255); }
+.dh1 a:hover { color: rgb(255, 204, 51); }
+.dh1 ul li dl { position: relative; top: 0px; left: 0px; z-index: 99; display: none; width: 138px; }
+.dh1 ul li dl dd { float: left; padding: 15px 0px 10px; width: 136px; background-color: rgb(41, 182, 112); }
+.dh1 ul li:hover dl { display: block; }
+.dh1 ul li dl:hover { display: block; }
+.wzindex { width: 972px; margin: 28px auto; }
+.wzk { width: 294px; height: 300px; margin: 0px 15px; float: left; background: rgb(255, 255, 255) none repeat scroll 0% 0%; box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.3); }
+.wzktop { width: 255px; height: 40px; line-height: 40px; padding: 0px 20px; background: rgb(41, 182, 112) none repeat scroll 0% 0%; }
+.wzktop a { color: rgb(255, 255, 255); }
+.wzkbd { width: 255px; padding: 20px; overflow: hidden; }
+.wzkbd ul li { margin-bottom: 10px; font-size: 14px; border-bottom: 1px dotted rgb(204, 204, 204); height: 22px; line-height: 20px; overflow: hidden; }
+.wzkbd a { color: rgb(102, 102, 102); }
+.wzkbd a:hover { color: rgb(255, 102, 0); }
+#MEIQIA-PANEL-HOLDER { position: fixed; bottom: 0px; right: 60px; z-index: -1; display: none; width: 320px; height: 480px; overflow: hidden; background-color: transparent; box-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.15); }
+#MEIQIA-IFRAME { position: absolute; top: 0px; right: 0px; bottom: 0px; left: 0px; display: block; width: 100%; height: 100%; border: 0px none; padding: 0px; margin: 0px; float: none; background: transparent none repeat scroll 0% 0%; }
+.MEIQIA-ICON { background-size: 40px auto; background-repeat: no-repeat; background-image: url('icon-mq.png'); }
+@media not all, only screen and (min--moz-device-pixel-ratio: 2), not all, not all {
+	.MEIQIA-ICON { background-image: url('icon-mq@2x.png'); }
+}
+.MEIQIA-ICON-TICKET1 { background-position: -20px 0px; }
+#MEIQIA-BTN-HOLDER { position: fixed; bottom: 0px; right: 0px; z-index: 2147483639; width: auto; font-family: "Helvetica Neue",Helvetica,Arial,"Hiragino Sans GB","Microsoft YaHei",sans-serif; background-color: transparent; }
+#MEIQIA-BTN { display: block; height: 40px; font-size: 16px; color: rgb(255, 255, 255); text-align: center; border-left: 1px solid rgba(0, 0, 0, 0.1); border-top: 1px solid rgba(0, 0, 0, 0.1); border-right: 1px solid rgba(0, 0, 0, 0.1); box-shadow: 0px 0px 14px 0px rgba(0, 0, 0, 0.16); cursor: pointer; text-decoration: none; background-color: rgb(255, 102, 0); }
+#MEIQIA-BTN-ICON { display: block; float: left; width: 20px; height: 20px; margin: 10px 10px 0px; }
+#MEIQIA-BTN-LINE { display: block; float: left; width: 1px; height: 100%; background-color: rgba(0, 0, 0, 0.08); vertical-align: middle; }
+#MEIQIA-BTN-TEXT { display: block; float: left; height: 40px; margin: 0px 10px; line-height: 40px; overflow-y: hidden; font-size: 16px; color: rgb(255, 255, 255); }
+#MEIQIA-CIRCLE { position: absolute; top: -13px; left: -13px; display: none; width: 26px; height: 26px; text-align: center; line-height: 26px; font-size: 14px; color: rgb(255, 255, 255); border-radius: 15px; background-color: rgb(255, 59, 48); }
+#MEIQIA-BUBBLE { position: absolute; bottom: 64px; display: none; width: 260px; border: 1px solid rgb(247, 247, 247); border-radius: 4px; color: rgb(0, 0, 0); text-align: left; box-shadow: 0px 0px 14px 0px rgba(0, 0, 0, 0.16); line-height: 1.42857; background-color: rgb(255, 255, 255); }
+#MEIQIA-BUBBLE-ARROW1 { position: absolute; z-index: 2; font-size: 0px; line-height: 0; border-width: 8px 7px 0px; border-color: rgb(255, 255, 255) transparent; border-style: solid dashed dashed; }
+#MEIQIA-BUBBLE-ARROW2 { position: absolute; z-index: 1; font-size: 0px; line-height: 0; border-width: 10px 8px 0px; border-color: rgb(247, 247, 247) transparent; border-style: solid dashed dashed; }
+#MEIQIA-BUBBLE { right: 0px; }
+#MEIQIA-BUBBLE-ARROW1 { right: 12px; bottom: -8px; }
+#MEIQIA-BUBBLE-ARROW2 { right: 11px; bottom: -10px; }
+#MEIQIA-BUBBLE-CLOSE { position: absolute; display: none; top: 12px; right: 12px; width: 10px; height: 10px; background-position: -5px -245px; cursor: pointer; }
+#MEIQIA-BUBBLE:hover #MEIQIA-BUBBLE-CLOSE { display: block; }
+#MEIQIA-BUBBLE-INSIDE { margin: 12px 18px; }
+#MEIQIA-BUBBLE-AVATAR { width: 26px; height: 26px; border-radius: 13px; margin-right: 6px; vertical-align: top; box-shadow: 0px 0px 8px 0px rgba(0, 0, 0, 0.15); }
+#MEIQIA-BUBBLE-NAME { display: inline-block; margin-top: 3px; font-size: 16px; color: rgb(0, 0, 0); }
+#MEIQIA-BUBBLE-MSG { max-height: 40px; margin-top: 5px; font-size: 14px; overflow: hidden; color: rgb(0, 0, 0); }
+#MEIQIA-INVITE { position: fixed; z-index: 2147483639; display: none; width: 340px; height: 130px; margin-bottom: 64px; border: 1px solid rgb(247, 247, 247); border-radius: 4px; box-shadow: 0px 0px 14px 0px rgba(0, 0, 0, 0.16); text-align: left; cursor: pointer; color: rgb(0, 0, 0); line-height: 1.42857; background-color: rgb(255, 255, 255); }
+#MEIQIA-INVITE-ARROW1, #MEIQIA-INVITE-ARROW2 { position: absolute; font-size: 0px; line-height: 0; }
+#MEIQIA-INVITE-ARROW1 { z-index: 2; }
+#MEIQIA-INVITE-ARROW2 { z-index: 1; }
+#MEIQIA-INVITE { right: 0px; bottom: 0px; }
+#MEIQIA-INVITE-ARROW1 { right: 12px; bottom: -8px; border-top: 8px solid rgb(255, 255, 255); border-right: 7px solid transparent; border-left: 7px solid transparent; }
+#MEIQIA-INVITE-ARROW2 { right: 11px; bottom: -10px; border-top: 9px solid rgb(247, 247, 247); border-right: 8px solid transparent; border-left: 8px solid transparent; }
+#MEIQIA-INVITE-CLOSE { position: absolute; right: -20px; top: -20px; width: 40px; height: 40px; background-position: 0px -260px; cursor: pointer; }
+#MEIQIA-INVITE-CLOSE:hover { background-position: 0px -300px; }
+#MEIQIA-INVITE-INSIDE { width: 300px; height: 44px; margin: 46px 20px 0px; text-align: left; font-size: 14px; line-height: 22px; overflow: hidden; color: rgb(0, 0, 0); word-break: break-all; }
+html #hm_t_undefined .hm-t-go-top { position: fixed; right: 2px; bottom: 2px; z-index: 99998; cursor: pointer; width: 40px; height: 37px ! important; text-align: center; white-space: normal; font-size: 14px; line-height: 17px; padding-top: 3px; color: rgb(255, 255, 255); background: rgb(102, 102, 102) url('undefined') no-repeat scroll -42px center; }

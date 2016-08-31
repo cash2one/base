@@ -1,0 +1,36 @@
+{% include "articles_index.html"%}
+
+
+<style>
+ul li {list-style:none;}
+body { background:url("{{STATIC_URL}}image/WallPaper.jpg");}
+</style>
+<html>
+	<head>
+		<title>Articles Details</title>
+		<link rel="stylesheet" href="{{ STATIC_URL }}bootstrap/css/bootstrap.min.css" />		
+		<meta charset="utf8">
+	</head>
+	<body>
+		<h2>{{a.title}}的内容</h2>
+
+		
+		<br/><br/>
+	<ul>
+		<li><h4>{{a.title}}</h4></li>	
+	   <li>{{a.author}}</li>	<br>
+	   
+	   <li>{{a.pub_date}}</li>	<br><br>
+	   
+	    {{a.content|safe}}
+		
+	
+	
+	</ul>	
+		
+    
+	</body>
+
+
+
+</html>

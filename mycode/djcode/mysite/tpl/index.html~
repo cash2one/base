@@ -1,0 +1,23 @@
+<html>
+<head><title>Restaurant XXX</title></head>
+
+<body>
+	<h2>欢迎来到XXX</h2>
+	{% if request.user.is_authenticated %}
+	<p>{{request.usr}} 您已经登录了！</p><a href="/accounts/login/">退出</a><br/><br/>
+	<a href="/list/">餐厅列表</a>
+	{% else %}
+	<p>您尚未登录！</p>
+	<a href="/accounts/login/">登录</a>
+	<a href="/accounts/register/">注册</a>
+
+	{% endif %}
+
+
+
+
+</body>
+
+
+
+</html>
