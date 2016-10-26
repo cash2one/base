@@ -1,0 +1,4 @@
+# pack-refs with: peeled fully-peeled 
+996534428632008452c38f6ea13f0d7604623ec7 refs/remotes/origin/SMS_config
+eae9d91acdd41a567b7fa67e597eddeaf5165841 refs/remotes/origin/develop
+e0c2c7b70a5a90fe6137f2f03a0217fe8b2674c5 refs/remotes/origin/master

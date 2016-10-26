@@ -1,0 +1,11 @@
+Step 1: 7月1日前完成
+1.添加请求连接参数
+http://www.subinwechat.com/p/ParkingWechatAuthorize.html?system=system_id&user=user_id&ts=timestamp&sign=signature&msg=XXXXX
+具体参数定义请见附件。
+2.修改按钮和logo(subin的logo和客户的logo)
+3.删除安全验证界面
+4.自动导出csv报表文件（包括vbm报表和微信报表），导出到ftp
+
+Step 2: 8月10日前完成
+1.固定折扣，随机折扣（客户请求金额，由云端随机产生折扣或者产生固定折扣给客户）
+2.与crm通讯定义进行折扣（需要客户提前20天将crm的接口文档发送给我们）

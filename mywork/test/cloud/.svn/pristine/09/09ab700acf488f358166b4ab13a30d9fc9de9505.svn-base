@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{7C2ECC22-B644-4B8D-8229-2D6AEA9F91A1}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Cytel.Cloud.DataInteractiveService.ExeHost</RootNamespace>
+    <AssemblyName>Cytel.Cloud.DataInteractiveService.ExeHost</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Cytel.Common.Log">
+      <HintPath>..\DLL\Cytel.Common.Log.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=692fbea5521e1304, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\DLL\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.ServiceModel.Web" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Cytel.Cloud.DataInteractiveService.Business\Cytel.Cloud.DataInteractiveService.HZ.csproj">
+      <Project>{04d64198-db0b-4958-808d-32d10dd92a3d}</Project>
+      <Name>Cytel.Cloud.DataInteractiveService.HZ</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Cytel.Cloud.DataInteractiveService.Contract\Cytel.Cloud.DataInteractiveService.Contract.csproj">
+      <Project>{27ed5626-e9e8-4a21-8f25-78dd21149454}</Project>
+      <Name>Cytel.Cloud.DataInteractiveService.Contract</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Cytel.Cloud.DataInteractiveService.Model_HZ\Cytel.Cloud.DataInteractiveService.Model_HZ.csproj">
+      <Project>{d6660884-7788-4500-a92f-975f6fffe33f}</Project>
+      <Name>Cytel.Cloud.DataInteractiveService.Model_HZ</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Cytel.Cloud.DataInteractiveService.Model_SH\Cytel.Cloud.DataInteractiveService.Model_SH.csproj">
+      <Project>{787eae5e-e2e6-4893-b9a2-159f8456c1dd}</Project>
+      <Name>Cytel.Cloud.DataInteractiveService.Model_SH</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Cytel.Cloud.DataInteractiveService.Service\Cytel.Cloud.DataInteractiveService.Service.csproj">
+      <Project>{681023f4-3794-46a9-8c4b-f031feddd068}</Project>
+      <Name>Cytel.Cloud.DataInteractiveService.Service</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Cytel.Cloud.DataInteractiveService.SH\Cytel.Cloud.DataInteractiveService.SH.csproj">
+      <Project>{4d69fbe3-c096-4565-a946-d4000f64e706}</Project>
+      <Name>Cytel.Cloud.DataInteractiveService.SH</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="log4net.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="log4net.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

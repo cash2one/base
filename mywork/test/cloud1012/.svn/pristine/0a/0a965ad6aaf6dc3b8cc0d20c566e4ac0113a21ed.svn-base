@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>停车缴费</title>
+	</head>
+	<body>
+	</body>
+</html>
+
+<script src="https://res.wx.qq.com/open/js/jweixin-1.0.0.js"> </script>
+<script src="js/jquery.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/MyJSTools.js"></script>
+<script>
+	//index 0:个人信息 1：缴费记录 2：我的卡券
+	//http://www.lailaiapp.cn/ParkingCenterSelector.html?index=
+	init();
+	function init ()
+	{
+		
+//		var title = GetQueryString('title');
+//		if (title != null && title.length > 0)
+//		{
+//			$.post(my_ip_address+"/wechat/get_public", {'titleId':title},function(data)
+//			{
+//				data=eval("("+data+")");
+//				window.localStorage.setItem("title", data.title);
+//				document.title = window.localStorage.getItem("title");
+//				
+//				afterGetTitle();
+//			});
+//		}
+//		else 
+//		{
+//			afterGetTitle ();
+//		}
+	
+		getQueryAppid();
+		afterGetTitle ();
+	}
+	function afterGetTitle()
+	{
+		var loginSuccess = window.localStorage.getItem("loginSuccess");
+		if (loginSuccess != null && loginSuccess == "true")
+		{//跳转相关界面
+			var index = parseInt(GetQueryString('index'));
+			switch(index)
+			{
+				case 0:
+				{
+					//alert("个人信息");
+					//ParkingCenterInfo.html
+					window.location.href = "ParkingCenterInfo.html";
+				}
+				break;
+				case 1:
+				{
+					//alert("缴费记录");
+					window.location.href = "ParkingCenterHistroy.html";
+				}
+				break;
+				case 2:
+				{
+					//alert("我的卡券");
+					window.location.href = "ParkingCenterCoupon.html";
+				}
+				break;
+				default:
+				{
+					window.location.href = "ParkingCenterInfo.html";
+				}
+				
+			}
+		}
+		else 
+		{//跳转授权界面之后再次跳转登陆界面
+			window.location.href = "ParkingWechatAuthorize.html?redirect=1";
+		}
+	}
+</script>

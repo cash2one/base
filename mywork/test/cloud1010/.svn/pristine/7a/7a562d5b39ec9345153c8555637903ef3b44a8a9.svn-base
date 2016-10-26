@@ -1,0 +1,20 @@
+# ! /usr/bin/python
+# -*- coding:utf-8 -*-
+# Filename: config.py
+# Author: jack
+# E-mail: jack_chen@subin.cn
+# Date: 2016-06-22
+# Description: 配置文件基类
+
+mongodb_host = 'localhost'
+mongodb_port = 27017
+
+ftp_ip = '120.27.144.128'
+ftp_name = 'kerry'
+ftp_psw = 'Kerry<3You!'
+
+export_csv_interval = 24  # 小时
+export_csv_time = '01:00:00'  # 时间
+export_before_days = [1]
+
+export_park_id = '0112'  # 需要自动导出的停车场

@@ -1,0 +1,684 @@
+from .CryptManager import CryptManager, CouponIdCrypt
+import datetime
+import urllib.request
+import time as systemTime
+import hashlib
+from .models import User, UserOrder, CouponManagement, UserCouponModel, ParkManagement, PropertyCompany, CouponSubCode, \
+    InvoiceManagement
+import random
+import json
+import time
+from .BarCodeObject import BarCode
+from mongoengine import GridFSProxy
+from bson.objectid import ObjectId
+from flask import Response
+from .logger import *
+from config.default import Config
+
+RESULT_ERROR = 0
+RESULT_SUCCESS = 1
+cm = CryptManager('voncytel')
+mCouponIdCrypt = CouponIdCrypt()
+
+SEND_URL = 'http://139.129.128.71:8086/msgHttp/json/mt'
+ACCOUNT = 'xitu106'
+PASSWORD = 'xitu123456'
+COUPON_STATUS_VAILD = 1  # 正常，可以使用
+
+COUPON_STATUS_USED = 0  # 已经使用
+COUPON_STATUS_OUT = 2  # 过期，不可以使用
+COUPON_STATUS_NOT_START = 3  # 未开始，不可以使用
+
+mBarCode = BarCode()
+
+
+class GetImage:
+    def getImageIdByTicket(self, ticket):
+        try:
+            myParkId = (str(ticket))[0:4]
+            mPropertyCompany = ParkManagement.objects(park_id=myParkId).first()
+            if (mPropertyCompany != None):
+                proxy = GridFSProxy(grid_id=ObjectId(mPropertyCompany.logo._id), collection_name='images')
+                return Response(proxy.read(), mimetype='image/jpeg')
+            return ''
+        except Exception as e:
+            logging.exception(e)
+            return ''
+
+
+    def getImageIdByParkId(self, parkId):
+        try:
+            mPropertyCompany = ParkManagement.objects(park_id=parkId).first()
+            if (mPropertyCompany != None):
+                proxy = GridFSProxy(grid_id=ObjectId(mPropertyCompany.logo._id), collection_name='images')
+                return Response(proxy.read(), mimetype='image/jpeg')
+            return ''
+        except Exception as e:
+            logging.exception(e)
+            return ''
+
+class GetBill:
+    def getBillPriceByCode(self, seq):
+        mUserOrder = UserOrder.objects(seq=seq).first()
+        if (mUserOrder != None):
+            return {'code': RESULT_SUCCESS, 'msg': '订单价格', 'price': mUserOrder.ActualPrice}
+
+        return {'code': RESULT_ERROR, 'msg': '查无订单'}
+
+    def getBillByCode(self, openId, seq, code):
+        mUserOrder = UserOrder.objects(seq=seq, wechat_openId=openId).first()
+        if (mUserOrder != None):
+            if (mUserOrder.isPaid == False):
+                return {'code': RESULT_ERROR, 'msg': '您的订单还未支付！'}
+            if (mUserOrder.isInvoice == True):
+                return {'code': RESULT_ERROR, 'msg': '您已经领取过此订单的发票，不可重复领取！'}
+
+            park_id = mUserOrder.park_id
+            mParkManagement = ParkManagement.objects(park_id=park_id).first()
+            if (mParkManagement != None):
+                if (mParkManagement.invoice_code == code):
+                    mUserOrder.update(isInvoice=True);
+                    return {'code': RESULT_SUCCESS, 'msg': '领取成功'}
+                else:
+                    return {'code': RESULT_ERROR, 'msg': '您的口令有误，请询问服务人员后再试'}
+
+        return {'code': RESULT_ERROR, 'msg': '查无订单', 'seq': seq}
+
+
+class MyUserOrder:
+    def getQuiteTime(self, seq, parkId):
+        if (len(seq) <= 0):
+            return {'code': RESULT_SUCCESS, 'quiteTime': '20', 'seq': seq}
+        try:
+            mParkManagement = ParkManagement.objects(park_id=parkId).first()
+            if (mParkManagement != None):
+                return {'code': RESULT_SUCCESS, 'quiteTime': mParkManagement.quit_time_limit, 'seq': seq}
+        except Exception as e:
+            logging.exception(e)
+            return {'code': RESULT_SUCCESS, 'quiteTime': '20', 'seq': seq}
+        return {'code': RESULT_SUCCESS, 'quiteTime': '20', 'seq': seq}
+
+    def getOrder(self, seq, openId):
+        # 解决网络问题重复支付可以从报表看出
+        return UserOrder.objects(seq=seq, wechat_openId=openId, isPaid=False).first()
+
+    # 停车订单写入
+    def saveUserOrder(self, Ticket, nickName, openId, Seq, Time, Entry, PaymentNr, Discount, Price, QuitTime,
+                      chooseCouponId, ActualPrice, thridOpenId, parkId, lpn, payway):
+        myParkId = parkId
+        if (myParkId == None or myParkId == 'null' or myParkId == ''):
+            myParkId = (str(Ticket))[0:4]
+        mParkManagement = ParkManagement.objects(park_id=myParkId).first()
+        myParkName = ""
+        myCompany = ""
+        if (mParkManagement != None):
+            myParkName = mParkManagement.park_name
+            myCompany = mParkManagement.company.company_name
+
+        coupon_price = 0
+
+        if (chooseCouponId != None and len(chooseCouponId) >= 6):
+            mUserCouponModel = UserCouponModel.objects(coupon_id=chooseCouponId).first()
+            if (mUserCouponModel != None):
+                coupon_price = mUserCouponModel.coupon_price
+
+        seller_name = ''
+        mCouponManagement = CouponManagement.objects(coupon_id=chooseCouponId).first()
+        if (mCouponManagement != None):
+            seller_name = mCouponManagement.seller_name
+
+        coupon_price = str(coupon_price)
+        Price = str('%0.2f' % float(Price))
+
+        mUserOrder = self.getOrder(Seq, openId)
+        if (mUserOrder != None):
+            mUserOrder.update(ticket=Ticket,
+                              wechat_id=nickName,
+                              wechat_openId=openId,
+                              seq=Seq,
+                              time=Time,
+                              entry=Entry,
+                              paymentNr=PaymentNr,
+                              discount=Discount,
+                              price=Price,
+                              pay_time=datetime.datetime.now(),
+                              quit_time=QuitTime,
+                              chooseCouponId=chooseCouponId,
+                              ActualPrice=ActualPrice,
+                              park_id=myParkId,
+                              park_name=myParkName,
+                              company_name=myCompany,
+                              coupon_price=coupon_price,
+                              third_wechat_openId=thridOpenId,
+                              license_plate=lpn,
+                              payway=payway,
+                              seller_name=seller_name)
+        else:
+            mUserOrder = UserOrder(ticket=Ticket,
+                                   wechat_id=nickName,
+                                   wechat_openId=openId,
+                                   seq=Seq,
+                                   time=Time,
+                                   entry=Entry,
+                                   paymentNr=PaymentNr,
+                                   discount=Discount,
+                                   price=Price,
+                                   pay_time=datetime.datetime.now(),
+                                   quit_time=QuitTime,
+                                   chooseCouponId=chooseCouponId,
+                                   ActualPrice=ActualPrice,
+                                   isPaid=False,
+                                   park_id=myParkId,
+                                   park_name=myParkName,
+                                   company_name=myCompany,
+                                   coupon_price=coupon_price,
+                                   third_wechat_openId=thridOpenId,
+                                   license_plate=lpn,
+                                   payway=payway,
+                                   seller_name=seller_name)
+            mUserOrder.save()
+
+
+        if (float(ActualPrice) <= 0):
+            return False
+        return True
+
+    def paySuccessWithZero(self, openId, Ticket, chooseCouponId, seq, price, parkId, lpn, payway):
+        myUserOrder = UserOrder.objects(seq=seq).first()
+        if (myUserOrder != None):
+            payTime = datetime.datetime.now()
+            myUserOrder.update(wechat_openId=openId, isPaid=True, pay_time=payTime)
+            if (len(chooseCouponId) > 0 and myUserOrder.isPaid == False):
+                mUserCouponModel = UserCouponModel.objects(coupon_id=chooseCouponId, coupon_status=COUPON_STATUS_VAILD,
+                                                           wechat_openId=openId).first()
+                if (mUserCouponModel != None):
+                    if (mUserCouponModel.receive_count > 0 and mUserCouponModel.receive_count == 1):
+                        mUserCouponModel.update(coupon_id=chooseCouponId, coupon_status=COUPON_STATUS_USED,
+                                                receive_count=0)
+                    elif (mUserCouponModel.receive_count > 0 and mUserCouponModel.receive_count > 1):
+                        mUserCouponModel.receive_count = mUserCouponModel.receive_count - 1
+                        mUserCouponModel.update(coupon_id=chooseCouponId, receive_count=mUserCouponModel.receive_count)
+                else:
+                    return {'code': RESULT_ERROR, 'msg': '优惠券不存在'}
+
+                # 提交已经使用掉的卡券数量
+                mCouponManagement = CouponManagement.objects(coupon_id=chooseCouponId).first()
+                if (mCouponManagement != None):
+                    mCouponManagement.used_amount = mCouponManagement.used_amount + 1
+                    mCouponManagement.update(coupon_id=chooseCouponId, used_amount=mCouponManagement.used_amount)
+            if (float(price) > 0):
+                if payway == '1':
+                    mBarCode.callServiceByLpn(parkId, lpn, float(myUserOrder.ActualPrice), myUserOrder.seq, True)
+                else:
+                    mBarCode.callService(Ticket, float(myUserOrder.ActualPrice), myUserOrder.seq, True)
+
+        else:
+            return {'code': RESULT_ERROR, 'msg': '订单已经支付或者订单不存在'}
+
+        return {'code': 2, 'msg': '提交完成'}
+
+    # 支付成功之后的回调，来修改订单状态
+    def paySuccess(self, openId, Ticket, chooseCouponId):
+        myUserOrder = UserOrder.objects(ticket=Ticket, wechat_openId=openId).first()
+        if (myUserOrder != None and myUserOrder.isPaid == False):
+            payTime = datetime.datetime.now()
+            myUserOrder.update(wechat_openId=openId, isPaid=True, pay_time=payTime)
+            if (len(chooseCouponId) > 0):
+                mUserCouponModel = UserCouponModel.objects(coupon_id=chooseCouponId).first()
+                if (mUserCouponModel != None):
+                    if (mUserCouponModel.receive_count > 0 and mUserCouponModel.receive_count == 1):
+                        mUserCouponModel.update(coupon_id=chooseCouponId, coupon_status=COUPON_STATUS_USED,
+                                                receive_count=0)
+                    elif (mUserCouponModel.receive_count > 0 and mUserCouponModel.receive_count > 1):
+                        mUserCouponModel.receive_count = mUserCouponModel.receive_count - 1
+                        mUserCouponModel.update(coupon_id=chooseCouponId, receive_count=mUserCouponModel.receive_count)
+                # 提交已经使用掉的卡券数量
+                mCouponManagement = CouponManagement.objects(coupon_id=chooseCouponId).first()
+                if (mCouponManagement != None):
+                    mCouponManagement.used_amount = mCouponManagement.used_amount + 1
+                    mCouponManagement.update(coupon_id=chooseCouponId, used_amount=mCouponManagement.used_amount)
+
+            mBarCode.callService(Ticket, myUserOrder.ActualPrice, myUserOrder.seq,False)
+        else:
+            return {'code': RESULT_ERROR, 'msg': '订单已经支付或者订单不存在'}
+
+        return {'code': RESULT_SUCCESS, 'msg': '提交完成'}
+
+
+class UserCoupon:
+    def getTime(self, startTime):
+        try:
+            return time.mktime(datetime.datetime.strptime(str(startTime), "%Y-%m-%d %H:%M:%S").timetuple())
+        except Exception as e:
+            logging.exception(e)
+
+        try:
+            return time.mktime(datetime.datetime.strptime(str(startTime), "%Y-%m-%d").timetuple())
+        except Exception as e:
+            logging.exception(e)
+
+        return time.mktime(datetime.datetime.now().timetuple())
+
+    # 获取自己所有优惠券列表
+    def getUserCoupon(self, openId):
+        if (len(openId) <= 0):
+            return {'code': RESULT_ERROR, 'msg': 'openId有误'}
+
+        mUser = User.objects(wechat_openId=openId).first()
+        # coupon_list = UserCouponModel.objects(wechat_openId=openId)
+        requestList = []
+        for mUserCouponModel in mUser.coupon_list:
+            try:
+                # 处理优惠券是否已经过期
+                coupon_time = time.mktime(
+                    datetime.datetime.strptime(str(mUserCouponModel.coupon_validity), "%Y-%m-%d %H:%M:%S").timetuple())
+                # coupon_start = time.mktime(datetime.datetime.strptime(str(mUserCouponModel.coupon_start), "%Y-%m-%d %H:%M:%S").timetuple())
+                coupon_start = self.getTime(mUserCouponModel.coupon_start)
+                cur_sec_time = time.mktime(datetime.datetime.now().timetuple())
+                if (cur_sec_time > coupon_time and mUserCouponModel.coupon_status == COUPON_STATUS_VAILD):
+                    mUserCouponModel.coupon_status = COUPON_STATUS_OUT
+                    mUserCouponModel.update(coupon_status=mUserCouponModel.coupon_status)
+
+                # print ("getUserCoupon="+str(mUserCouponModel.coupon_id) +"=="+str(mUserCouponModel.receive_count))
+                if (mUserCouponModel.coupon_status == COUPON_STATUS_VAILD and mUserCouponModel.receive_count > 0):
+                    mUserCouponModelData = {"coupon_id": str(mUserCouponModel.coupon_id),
+                                            "park_name": str(mUserCouponModel.park_name),
+                                            "coupon_name": str(mUserCouponModel.coupon_name),
+                                            "coupon_status": str(mUserCouponModel.coupon_status),
+                                            "coupon_price": str(mUserCouponModel.coupon_price),
+                                            "coupon_validity": str(
+                                                time.strftime("%Y.%m.%d", time.localtime(coupon_time))),
+                                            "receive_count": str(mUserCouponModel.receive_count),
+                                            "start_time": str(time.strftime("%Y.%m.%d", time.localtime(coupon_start)))
+                                            }
+                    requestList.append(mUserCouponModelData);
+            except Exception as e:
+                logging.exception(e)
+
+        respData = {'code': RESULT_SUCCESS, 'coupon_list': requestList}
+        return respData
+
+    def checkUserOrder(self, openId, ticket):
+        myUserOrderList = UserOrder.objects(ticket=ticket, wechat_openId=openId, coupon_price__gt='0')
+        for mUserOrder in myUserOrderList:
+            if (mUserOrder.isPaid == True):
+                return True
+
+        return False
+
+    def checkUserOrderByLpn(self, openId, lpn, nr):
+        myUserOrderList = UserOrder.objects(license_plate=lpn, wechat_openId=openId, paymentNr__lt=nr, coupon_price__gt='0')
+        for mUserOrder in myUserOrderList:
+            if (mUserOrder.isPaid == True):
+                return True
+
+        return False
+
+    # 支付界面获取可用优惠券列表
+    def getUserCouponUse(self, openId, ticket, lpn, payway, parkId, nr):
+
+        # myUserOrder = UserOrder.objects(ticket=ticket, wechat_openId=openId).first()
+        # if (myUserOrder != None and myUserOrder.isPaid == True):
+        #    return {'code': RESULT_ERROR, 'msg': '一次停车只可以使用一张优惠券'}
+        if (len(openId) <= 0):
+            return {'code': RESULT_ERROR, 'msg': 'openId有误'}
+
+        # 优惠券可多次使用
+        if (payway == '1'):
+            pass
+            # isPaid = self.checkUserOrderByLpn(openId, lpn, nr)
+            # if (isPaid):
+            #     return {'code': RESULT_ERROR, 'msg': '一次停车只可以使用一张优惠券'}
+        else:
+            # isPaid = self.checkUserOrder(openId, ticket)
+            # if (isPaid):
+            #     return {'code': RESULT_ERROR, 'msg': '一次停车只可以使用一张优惠券'}
+            parkId = (str(ticket))[0:4]
+        # coupon_list = UserCouponModel.objects(wechat_openId=openId)
+        mUser = User.objects(wechat_openId=openId).first()
+        requestList = []
+        for mUserCouponModel in mUser.coupon_list:
+            try:
+                # 处理优惠券是否已经过期
+                coupon_time = time.mktime(
+                    datetime.datetime.strptime(str(mUserCouponModel.coupon_validity), "%Y-%m-%d %H:%M:%S").timetuple())
+                # coupon_start = time.mktime(datetime.datetime.strptime(str(mUserCouponModel.coupon_start), "%Y-%m-%d %H:%M:%S").timetuple())
+                coupon_start = self.getTime(mUserCouponModel.coupon_start)
+
+                cur_sec_time = time.mktime(datetime.datetime.now().timetuple())
+                if (
+                        mUserCouponModel.coupon_status == COUPON_STATUS_VAILD or mUserCouponModel.coupon_status == COUPON_STATUS_NOT_START):
+                    if (cur_sec_time < coupon_start):
+                        mUserCouponModel.coupon_status = COUPON_STATUS_NOT_START
+                        mUserCouponModel.update(coupon_status=mUserCouponModel.coupon_status)
+                    elif (cur_sec_time > coupon_time):
+                        mUserCouponModel.coupon_status = COUPON_STATUS_OUT
+                        mUserCouponModel.update(coupon_status=mUserCouponModel.coupon_status)
+            except Exception as e:
+                logging.exception(e)
+
+            if (mUserCouponModel.coupon_status == COUPON_STATUS_VAILD and mUserCouponModel.receive_count > 0):  # 判断优惠券是否有效
+                mCouponManagement = CouponManagement.objects(coupon_id=mUserCouponModel.coupon_id).first()
+                if (mCouponManagement != None):
+                    if (mCouponManagement.parks.find(parkId) >= 0):  # 判断优len(mUser.coupon_list)惠券是否是符合条件的类型
+                        parks_id = mCouponManagement.parks.split(',')
+                        parksName = ""
+                        for parkIdData in parks_id:
+                            # index = 0
+                            # if (parkIdData.find(":") >= 0):
+                            #    index = -1
+                            parkId = parkIdData.split(":")[0]
+
+                            mParkManagement = ParkManagement.objects(park_id=parkId).first()
+                            # myParkName = ""
+                            if (mParkManagement != None):
+                                parksName = parksName + mParkManagement.park_name + " "
+
+                        mUserCouponModelData = {"coupon_id": str(mUserCouponModel.coupon_id),
+                                                "park_name": str(parksName),
+                                                "coupon_name": str(mUserCouponModel.coupon_name),
+                                                "coupon_status": str(mUserCouponModel.coupon_status),
+                                                "coupon_price": str(mUserCouponModel.coupon_price),
+                                                "coupon_validity": str(mUserCouponModel.coupon_validity),
+                                                "receive_count": str(mUserCouponModel.receive_count),
+                                                "start_time": str(mUserCouponModel.coupon_start)
+                                                }
+                        requestList.append(mUserCouponModelData)
+        respData = {'code': RESULT_SUCCESS, 'coupon_list': requestList}
+        return respData
+
+    # 扫码或者输入优惠码来添加优惠券
+    def addUserCoupon(self, subCode, openId):
+        if (len(subCode) != 13 and len(subCode) != 8):
+            return {'code': RESULT_ERROR, 'msg': '优惠券码有误'}
+
+        if (len(openId) <= 0):
+            return {'code': RESULT_ERROR, 'msg': 'openId有误'}
+
+        if (len(subCode) == 8):
+            couponId = subCode
+        else:
+            couponId = str(mCouponIdCrypt.decodeId(subCode))
+
+        couponId = couponId[0:8]
+
+        mCouponManagement = CouponManagement.objects(coupon_id=couponId).first()
+        if (mCouponManagement != None):
+            left_amount = float(mCouponManagement.amount) - float(mCouponManagement.received_amount)
+            if (left_amount <= 0):
+                return {'code': RESULT_ERROR, 'msg': '优惠券已经领完'}
+
+            if len(subCode) == 13:
+                mCouponSubCode = CouponSubCode.objects(subCode=subCode).first()
+                if (mCouponSubCode != None):
+                    return {'code': RESULT_ERROR, 'msg': '此优惠券已经被领取，不可重复领取'}
+
+            try:
+                my_coupon_status = int(mCouponManagement.coupon_status.split(":")[0])
+            except Exception as e:
+                logging.exception(e)
+                my_coupon_status = 0
+
+            if (my_coupon_status == 0):
+                return {'code': RESULT_ERROR, 'msg': '活动还未开始'}
+            elif (my_coupon_status == 2):
+                return {'code': RESULT_ERROR, 'msg': '活动已过期'}
+
+            getTime = str(mCouponManagement.receive_close_date).split('.')
+            receive_close_date = datetime.datetime.strptime(str(getTime[0]), "%Y-%m-%d %H:%M:%S")
+            receive_close_date = time.mktime(receive_close_date.timetuple())
+            cur_sec_time = time.mktime(datetime.datetime.now().timetuple())
+            if (cur_sec_time > receive_close_date):
+                return {'code': RESULT_ERROR, 'msg': '优惠券领取时间已过，下次请早'}
+
+            mUser = User.objects(wechat_openId=openId).first()
+            if (mUser != None):
+                isHasThisCoupon = False
+                for mUserCouponModel in mUser.coupon_list:
+                    if (couponId == mUserCouponModel.coupon_id):
+                        if (int(mUserCouponModel.total_count) >= int(mCouponManagement.receive_count)):
+                            return {'code': RESULT_ERROR, 'msg': '您已经领取过此优惠券'}
+
+                        mCouponManagement.received_amount = mCouponManagement.received_amount + 1
+                        mCouponManagement.update(coupon_id=couponId, received_amount=mCouponManagement.received_amount)
+
+                        if (mUserCouponModel.receive_count <= 0):
+                            mUserCouponModel.receive_count = 0
+                        mUserCouponModel.total_count = mUserCouponModel.total_count + 1
+                        mUserCouponModel.receive_count = mUserCouponModel.receive_count + 1
+                        mUserCouponModel.update(coupon_id=mUserCouponModel.coupon_id,
+                                                receive_count=mUserCouponModel.receive_count,
+                                                coupon_status=COUPON_STATUS_VAILD,
+                                                total_count=mUserCouponModel.total_count,
+                                                coupon_validity=str(mCouponManagement.valid_date),
+                                                coupon_start=str(mCouponManagement.start_date))
+                        isHasThisCoupon = True
+                        mCouponSubCode = CouponSubCode(subCode=subCode)
+                        mCouponSubCode.save()
+                        return self.getUserCoupon(openId)
+
+                if (isHasThisCoupon == False):
+                    mCouponManagement.received_amount = mCouponManagement.received_amount + 1
+                    mCouponManagement.update(coupon_id=couponId, received_amount=mCouponManagement.received_amount)
+
+                    parks_id = mCouponManagement.parks.split(',')
+                    parksName = ""
+                    for parkIdData in parks_id:
+                        index = 0
+                        if (parkIdData.find(":") >= 0):
+                            index = -1
+                        parkName = parkIdData.split(":")[index]
+                        parksName += parkName + " "
+
+                    mUserCouponModel = UserCouponModel(wechat_openId=openId,
+                                                       coupon_id=couponId,
+                                                       park_name=str(parksName),
+                                                       coupon_name=str(mCouponManagement.coupon_name),
+                                                       coupon_status=COUPON_STATUS_VAILD,
+                                                       coupon_price=mCouponManagement.price,
+                                                       # coupon_validity=str(getTime[0]),
+                                                       coupon_validity=str(mCouponManagement.valid_date),
+                                                       receive_count=1,
+                                                       total_count=1,
+                                                       coupon_start=str(mCouponManagement.start_date))
+                    mUserCouponModel.save()
+
+                    mUser.coupon_list.append(mUserCouponModel)
+                    mUser.update(wechat_openId=openId, coupon_list=mUser.coupon_list)
+                if len(subCode) == 13:
+                    mCouponSubCode = CouponSubCode(subCode=subCode)
+                    mCouponSubCode.save()
+
+                return self.getUserCoupon(openId)
+
+        else:
+            return {'code': RESULT_ERROR, 'msg': '优惠券码有误，请重试'}
+
+    # 用户消费换取优惠券
+    def exchangeUserCoupon(self, openId, obj, discount):
+        mCouponManagement = CouponManagement.objects(coupon_id=obj.id).first()
+        if (mCouponManagement != None):
+            return {'code': 0, 'msg': '该二维码卡券已使用'}
+        else:
+            mPropertyCompany = ParkManagement.objects(park_id=obj['system']).first()
+            if (mPropertyCompany != None):
+                mCouponManagement = CouponManagement(coupon_name='临时消费卡券',
+                                                coupon_id=openId,
+                                                price=str(discount),
+                                                start_date=datetime.datetime.strptime(str(datetime.date.today()),
+                                                                                            "%Y-%m-%d"),
+                                                valid_date=datetime.datetime.strptime(str(datetime.date.today()),
+                                                                                      '%Y-%m-%d') + datetime.timedelta(
+                                                    days=+0, hours=+23, minutes=+59, seconds=+59),
+                                                receive_count='1',
+                                                coupon_type='1',
+                                                amount='1',
+                                                received_amount=1,
+                                                parks=obj['system'] + ':' + mPropertyCompany.park_name,
+                                                park_id=obj['system'],
+                                                company_name=mPropertyCompany.company.company_name,
+                                                coupon_status='1:已激活',
+                                                seller_name=obj['seller'],
+                                                monetary=obj['price'],
+                                                )
+                mCouponManagement.save()
+                mUser = User.objects(wechat_openId=openId).first()
+                if (mUser != None):
+                    mUserCouponModel = UserCouponModel(wechat_openId=openId,
+                                                       coupon_id=openId,
+                                                       park_name=str(mPropertyCompany.park_name),
+                                                       coupon_name=str(mCouponManagement.coupon_name),
+                                                       coupon_status=COUPON_STATUS_VAILD,
+                                                       coupon_price=mCouponManagement.price,
+                                                       coupon_validity=str(mCouponManagement.valid_date),
+                                                       receive_count=1,
+                                                       total_count=1,
+                                                       coupon_start=str(mCouponManagement.start_date))
+                    mUserCouponModel.save()
+
+                    mUser.coupon_list.append(mUserCouponModel)
+                    mUser.update(wechat_openId=openId, coupon_list=mUser.coupon_list)
+        return self.getUserCoupon(openId)
+
+class UserParkHistroy:
+    # 获取用户支付订单历史，只返回已经支付完成的订单
+    def getUserParkHistroy(self, openId):
+        list = UserOrder.objects(wechat_openId=openId)
+        requestList = []
+        for mUserOrder in list:
+            if mUserOrder.isPaid == True:
+                try:
+                    mUserOrderData = {"parkName": str(mUserOrder.park_name),
+                                      "parkTimeEntry": str(mUserOrder.entry),
+                                      "parkTimeQuit": str(mUserOrder.quit_time),
+                                      "parkTime": str(mUserOrder.entry) + ' ~ ' + str(mUserOrder.quit_time),
+                                      "parkDuration": str(mUserOrder.time),
+                                      "parkCost": str(mUserOrder.price),
+                                      "seq": str(mUserOrder.seq),
+                                      "isInvoice": str(mUserOrder.isInvoice),
+                                      "parkDiscount": str(
+                                              float(
+                                                      '%0.2f' % (
+                                                      float(mUserOrder.price) - float(mUserOrder.ActualPrice))))}
+                    requestList.append(mUserOrderData);
+                except Exception as e:
+                    logging.exception("getUserParkHistroy error," + e)
+
+        respData = {'code': RESULT_SUCCESS, 'histroy_list': requestList}
+        return respData
+
+
+class UserInfo:
+    def getUserInfo(self, openId):
+        if (len(openId) > 0):
+            mUser = User.objects(wechat_openId=openId).first()
+            respData = {'code': RESULT_SUCCESS, 'license': mUser.license_plate, 'mobile': mUser.mobile}
+        else:
+            respData = {'code': RESULT_ERROR, 'msg': '绑定车牌失败，账号不存在'}
+        return respData
+
+    def createUser(self, respData):
+        openId = respData.get("openId", "")
+        nickname = respData.get("nickname", "")
+        if nickname == "":
+            nickname = '未知'
+        if (len(openId) <= 0):
+            return False
+        else:
+            mUser = User.objects(wechat_openId=openId).first()
+            if (mUser != None):
+                mUser.update(wechat_openId=openId, wechat_id=nickname)
+            else:
+                mUser = User(wechat_openId=openId, wechat_id=nickname, mobile='', license_plate='', varify_code='',
+                             park_id="", company_name="")
+                mUser.save()
+            return True
+
+
+class BindingLicense:
+    def binding(self, openId, license):
+        if (len(openId) > 0):
+            mUser = User.objects(wechat_openId=openId).first()
+            if (mUser != None):
+                mUser.update(wechat_openId=openId, license_plate=license)
+                respData = {'code': RESULT_SUCCESS, 'msg': '绑定车牌成功'}
+            else:
+                respData = {'code': RESULT_ERROR, 'msg': '绑定车牌失败，账号不存在'}
+        else:
+            respData = {'code': RESULT_ERROR, 'msg': '绑定车牌失败，openID不存在'}
+
+        return respData
+
+
+class VerifyLogin:
+    def login(self, phone, verify, openId):
+        if (len(openId) > 0):
+            mUser = User.objects(wechat_openId=openId).first()
+            if (mUser != None):
+                if mUser.varify_code == verify:
+                    respData = {'code': RESULT_SUCCESS, 'msg': '登陆成功'}
+                else:
+                    respData = {'code': RESULT_ERROR, 'msg': '验证码错误，登陆失败'}
+            else:
+                respData = {'code': RESULT_ERROR, 'msg': '请重新获取验证码'}
+        else:
+            respData = {'code': RESULT_ERROR, 'msg': '验证失败，openID不存在'}
+        return respData
+
+
+class SendVerifyCode:
+    def send(self, phone, openId, nickname):
+        timestamps = str(int(systemTime.time()) * 1000)
+        password = ''.join([PASSWORD, phone, timestamps])
+        password = hashlib.md5(password.encode('utf-8')).hexdigest()
+        code = self.getCode(phone, openId, nickname)
+        content = '【速宾】尊敬的用户，您本次手机验证码是：' + code + '，请在相应页面输入该数字。'
+        content = content.encode('utf-8')
+
+        postdata = urllib.parse.urlencode(
+                {'account': ACCOUNT, 'password': password, 'mobile': phone, 'content': content,
+                 'timestamps': timestamps})
+        postdata = postdata.encode('utf-8')
+
+        res = urllib.request.urlopen(SEND_URL, postdata, timeout=Config.HTTP_TIMEOUT)
+        str_info = res.read().decode()
+        jsondata_info = json.loads(str_info)
+        isSend = False
+        for i in range(len(jsondata_info['Rets'])):
+            Rspcode = jsondata_info['Rets'][i]['Rspcode']
+            if Rspcode == 0:
+                isSend = True
+                break
+
+        if (isSend):
+            respData = {'code': RESULT_SUCCESS}
+        else:
+            respData = {'code': RESULT_ERROR}
+
+        return respData
+
+    def getCode(self, phone, openId, nickname):
+        code = str(random.randint(10000, 99999))
+        if (len(openId) > 0):
+            mUser = User.objects(wechat_openId=openId).first()
+            if (mUser != None):
+                mUser.update(wechat_openId=openId, wechat_id=nickname, mobile=phone, varify_code=code)
+            else:
+                mUser = User(wechat_openId=openId, wechat_id=nickname, mobile=phone, license_plate='', varify_code=code,
+                             park_id="", company_name="")
+                mUser.save()
+
+        return code
+
+class UserInvoice:
+    def getInvoiceSetting(self, parkId):
+        respData = {'code': RESULT_ERROR}
+        if (len(parkId) > 0):
+            mInvoice = InvoiceManagement.objects.filter(parks__contains=parkId).first()
+            if mInvoice:
+                respData = {'code': RESULT_SUCCESS, 'invoice_switch': mInvoice.invoice_switch,
+                            'invoice_btn_name': mInvoice.invoice_btn_name,
+                            'invoice_prompt_data':mInvoice.invoice_prompt_data,
+                            'invoice_prompt_url':mInvoice.invoice_prompt_url}
+
+        return  respData

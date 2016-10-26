@@ -1,0 +1,468 @@
+import hashlib
+import json
+import time as systemTime
+import urllib.request
+import xml.etree.ElementTree as ET
+from random import Random
+from urllib.parse import quote
+
+from app.logger import *
+from config.default import Config
+from .BarCodeObject import BarCode
+from .models import PropertyCompany
+from .models import WechatToken, WechatOrder, UserOrder, UserCouponModel, CouponManagement, ParkManagement
+
+# test,use lailai account
+# WECHAT_APPID = "wx5dd4b8854b6c7976"
+# WECHAT_SECRET = "24d1ec4f9bd79e99aceed73cf7b9b3c4"
+# WECHAT_MCH_ID = "1271395601"
+# KEY = "HNsyjoa6UmeZzAltw1hPS38PgMC3A1h9"
+# AUTH_URL_SCAN = "http://lailaiapp.cn/ParkingScan.html"  # 微信授权回调页面
+# AUTH_URL_LOGIN = "http://lailaiapp.cn/ParkingLogin.html"
+# AUTH_URL_TICKET = "http://lailaiapp.cn/ParkingChoosePayAuthorize.html"
+
+# WECHAT_APPID = "wxd396e26e8729f0d1"
+# WECHAT_SECRET = "a40b028e9974d5da8589a86d0a423888"
+# WECHAT_MCH_ID = "1264052801"
+# KEY = "A82Dfdks32sbkkt5454hhsj376gfnmx2"
+# AUTH_URL_SCAN = "http://www.subinwechat.com/parkhtml/ParkingScan.html"  # 微信授权回调页面
+# AUTH_URL_LOGIN = "http://www.subinwechat.com/parkhtml/ParkingLogin.html"
+# AUTH_URL_TICKET = "http://www.subinwechat.com/parkhtml/ParkingChoosePayAuthorize.html"
+
+# WECHAT_PAY_NOTIFY_URL = "http://139.196.106.245:5000/wechat/wxpayAction"  # 微信支付时的notify_url
+# WECHAT_PAY_BODY = '停车费支付'
+# WECHAT_PAY_ATTACH = '停车费支付'
+
+COUPON_STATUS_USED = 0  # 已经使用
+COUPON_STATUS_VAILD = 1  # 正常，可以使用
+COUPON_STATUS_OUT = 2  # 过期，不可以使用
+
+mBarCode = BarCode()
+
+
+class WechatTools:
+    def getWechatName(self, id):
+        mParkManagement = ParkManagement.objects(park_id=id).first()
+        if (mParkManagement != None):
+            respData = {'title': mParkManagement.park_name}
+            return respData
+        respData = {'title': "速宾支付"}
+        return respData
+
+    def arrayToXml(self, arr):
+        xml = ["<xml>"]
+        for k, v in arr.items():
+            if v.isdigit():
+                xml.append("<{0}>{1}</{0}>".format(k, v))
+            else:
+                xml.append("<{0}><![CDATA[{1}]]></{0}>".format(k, v))
+        xml.append("</xml>")
+        return "".join(xml)
+
+    def xmlToArray(self, xml):
+        """将xml转为array"""
+        array_data = {}
+        root = ET.fromstring(xml)
+        for child in root:
+            value = child.text
+            array_data[child.tag] = value
+        return array_data
+
+    def getRandomStrByTime(self):
+        nowTime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")  # 生成当前时间
+        random = Random()
+        randomNum = random.randint(0, 100)  # 生成的随机整数n，其中0<=n<=100
+        if randomNum <= 10:
+            randomNum = str(0) + str(randomNum)
+        uniqueNum = str(nowTime) + str(randomNum)
+        return uniqueNum
+
+    def random_str(self):
+        randomlength = 16
+        str = ''
+        chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789'
+        length = len(chars) - 1
+        random = Random()
+        for i in range(randomlength):
+            str += chars[random.randint(0, length)]
+        return str
+
+    def formatBizQueryParaMap(self, paraMap, urlencode):
+        """格式化参数，签名过程需要使用"""
+        slist = sorted(paraMap)
+        buff = []
+        for k in slist:
+            v = quote(paraMap[k]) if urlencode else paraMap[k]
+            if v:
+                buff.append("{0}={1}".format(k, v))
+
+        return "&".join(buff)
+
+    def getSign(self, obj, appid):
+        """生成签名"""
+        # 签名步骤一：按字典序排序参数,formatBizQueryParaMap已做
+        str = self.formatBizQueryParaMap(obj, False)
+        # 签名步骤二：在string后加入KEY
+        # String = "{0}&key={1}".format(String.encode('utf-8'),KEY)
+        str = "{0}&key={1}".format(str, self.get_wechat_key(appid))
+        # 签名步骤三：MD5加密
+        str = hashlib.md5(str.encode('utf-8')).hexdigest()
+        # 签名步骤四：所有字符转为大写
+        result_ = str.upper()
+        return result_
+
+    def getCytelSign(self, obj):
+        """生成西图签名数据"""
+        # 签名步骤一：按字典序排序参数,formatBizQueryParaMap已做
+        str = self.formatBizQueryParaMap(obj, False)
+        # 签名步骤二：在string后加入KEY
+        str = "{0}&key={1}".format(str, Config.CYTEL_KEY)
+        # 签名步骤三：MD5加密
+        str = hashlib.md5(str.encode('utf-8')).hexdigest()
+        # 签名步骤四：所有字符转为大写
+        result_ = str.upper()
+        return result_;
+
+    def getSignWithoutKey(self, ticket, noncestr, timestamp, cur_url):
+        data = {'jsapi_ticket': ticket, 'noncestr': noncestr, 'timestamp': timestamp, 'url': cur_url}
+        sha1 = hashlib.sha1()
+        keys = data.keys()
+        mylist = list(data.keys())
+        mylist.sort()
+        data_str = '&'.join(['%s=%s' % (key, data[key]) for key in mylist])
+        signature = hashlib.sha1(data_str.encode('utf-8')).hexdigest()
+        return signature
+
+    def createOauthUrlForCodeById(self, id, appid, scope):
+        # redirectUrl = self.my_urlencode(AUTH_URL_TICKET)
+        redirectUrl = self.my_urlencode(Config.AUTH_URL_TICKET + "?id=" + id)
+        """生成可以获得code的url"""
+        urlObj = {}
+        urlObj["appid"] = self.get_appid(appid)
+        urlObj["redirect_uri"] = redirectUrl
+        urlObj["response_type"] = "code"
+        # urlObj["scope"]             = "snsapi_base" snsapi_userinfo
+        urlObj["scope"] = scope
+        urlObj["state"] = "STATE#wechat_redirect"
+        bizString = self.formatBizQueryParaMap(urlObj, False)
+        return "https://open.weixin.qq.com/connect/oauth2/authorize?" + bizString
+
+    def createOauthUrlForCode(self, redirectIndex, appid, scope):
+        try:
+            redirectIndex = int(redirectIndex)
+        except Exception as e:
+            redirectIndex = 0
+            logging.exception(e)
+
+        if redirectIndex == 1:
+            redirectUrl = self.my_urlencode(Config.AUTH_URL_LOGIN)
+        elif redirectIndex == 2:
+            redirectUrl = self.my_urlencode(Config.AUTH_URL_LPN)
+        elif redirectIndex == 3:
+            redirectUrl = self.my_urlencode(Config.AUTH_URL_COUPON)
+        else:
+            redirectUrl = self.my_urlencode(Config.AUTH_URL_SCAN)
+
+        """生成可以获得code的url"""
+        urlObj = {}
+        urlObj["appid"] = self.get_appid(appid)
+        urlObj["redirect_uri"] = redirectUrl
+        urlObj["response_type"] = "code"
+        # urlObj["scope"]             = "snsapi_base" snsapi_userinfo
+        urlObj["scope"] = scope
+        urlObj["state"] = "STATE#wechat_redirect"
+        bizString = self.formatBizQueryParaMap(urlObj, False)
+        return "https://open.weixin.qq.com/connect/oauth2/authorize?" + bizString
+
+    def createOauthUrlForOpenid(self, code, appid):
+        """生成可以获得openid的url"""
+        urlObj = {}
+        urlObj["appid"] = self.get_appid(appid)
+        urlObj["secret"] = self.get_wechat_secret(appid)
+        urlObj["code"] = code
+        urlObj["grant_type"] = "authorization_code"
+        bizString = self.formatBizQueryParaMap(urlObj, False)
+        return "https://api.weixin.qq.com/sns/oauth2/access_token?" + bizString
+
+    def getOpenIdAndNickName(self, code, appid):
+        openidUrl = self.createOauthUrlForOpenid(code, appid)
+        str_openid = urllib.request.urlopen(openidUrl, timeout=Config.HTTP_TIMEOUT).read()
+        jsondata_token = json.loads(str_openid.decode())
+        openid = jsondata_token['openid']
+        access_token = jsondata_token['access_token']
+        nickname = self.getUserInfo(access_token, openid)
+        respData = {'openId': openid, 'nickname': nickname}
+        return respData
+
+    def getUserInfo(self, token, openId):
+        url = "https://api.weixin.qq.com/sns/userinfo?access_token=" + token + "&openid=" + openId + "&lang=zh_CN"
+        str_info = urllib.request.urlopen(url, timeout=Config.HTTP_TIMEOUT).read()
+        jsondata_info = json.loads(str_info.decode())
+        nickname = " "
+        try:
+            nickname = jsondata_info.get('nickname', ' ')  # jsondata_info['nickname']
+            # sex = jsondata_info['sex']
+            # province = jsondata_info['province']
+            # city = jsondata_info['city']
+            # country = jsondata_info['country']
+            # headimgurl = jsondata_info['headimgurl']
+        except Exception as e:
+            logging.exception(e)
+        return nickname
+
+    def formatBizQueryParaMap(self, paraMap, urlencode):
+        """格式化参数，签名过程需要使用"""
+        slist = sorted(paraMap)
+        buff = []
+        for k in slist:
+            v = quote(paraMap[k]) if urlencode else paraMap[k]
+            if v:
+                buff.append("{0}={1}".format(k, v))
+        return "&".join(buff)
+
+    def my_urlencode(self, str):
+        reprStr = repr(str).replace(r'\x', '%')
+        return reprStr[1:-1]
+
+    def getWechatToken(self, appid):
+        url_token = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=' + self.get_appid(
+            appid) + '&secret=' + self.get_wechat_secret(appid)
+        str_token = urllib.request.urlopen(url_token, timeout=Config.HTTP_TIMEOUT).read()
+        jsondata_token = json.loads(str_token.decode())
+        return jsondata_token['access_token']
+
+    def getWechatTicket(self, token):
+        url_ticket = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=' + token + '&type=jsapi'
+        str_ticket = urllib.request.urlopen(url_ticket, timeout=Config.HTTP_TIMEOUT).read()
+        jsondata_ticket = json.loads(str_ticket.decode())
+        return jsondata_ticket['ticket']
+
+    def getWechatPayInfo(self, total_fee, openid, spbill_create_ip, Ticket, Time, QuitTime, Seq, chooseCouponId, appid,
+                         lpn, payway, parkId):
+        jsApiObj = {}
+        jsApiObj["appid"] = self.get_appid(appid)
+        jsApiObj["mch_id"] = self.get_wechat_mch_id()
+        if Config.SUPPORT_THIRD_PART:
+            (is_direct, wechat_sub_mch_id) = self.get_wechat_sub_mch_id(parkId, Ticket)
+            if is_direct == True:
+                jsApiObj["mch_id"] = Config.WECHAT_SERVICE_MCH_ID
+                if wechat_sub_mch_id != None and wechat_sub_mch_id.strip() != '':
+                    jsApiObj["sub_mch_id"] = wechat_sub_mch_id
+        jsApiObj["nonce_str"] = self.random_str()
+        jsApiObj["body"] = Config.WECHAT_PAY_BODY
+        jsApiObj["total_fee"] = total_fee
+        jsApiObj["trade_type"] = "JSAPI"
+        jsApiObj["openid"] = openid
+        jsApiObj["out_trade_no"] = self.getRandomStrByTime()
+        jsApiObj["spbill_create_ip"] = spbill_create_ip
+        jsApiObj["notify_url"] = Config.WECHAT_PAY_NOTIFY_URL
+        jsApiObj["attach"] = payway
+        jsApiObj["goods_tag"] = Config.WECHAT_GOODS_TAGS
+        try:
+            if (parkId == None or parkId == 'null' or parkId == ''):
+                parkId = (str(Ticket))[0:4]
+            goods_tags = ParkManagement.objects(park_id=parkId).first().wechat_goods_tags
+            if goods_tags != None and str(goods_tags).strip() != '':
+                jsApiObj["goods_tag"] = goods_tags
+        except Exception as e:
+            logging.exception(e)
+        jsApiObj["sign"] = self.getSign(jsApiObj, self.get_appid(appid))
+        # 添加微信订单存储，用于微信回调
+        # mWechatOrder = WechatOrder.objects(Ticket = Ticket).first()
+        # if (mWechatOrder != None and mWechatOrder.isCheck == False):
+        #    mWechatOrder.update(out_trade_no = jsApiObj["out_trade_no"], sign = jsApiObj["sign"], openid = jsApiObj["openid"],Ticket = Ticket)
+        # else:
+        Time = int(Time)
+        mWechatOrder = WechatOrder(out_trade_no=jsApiObj["out_trade_no"], sign=jsApiObj["sign"],
+                                   openid=jsApiObj["openid"], Ticket=Ticket, lpn=lpn, isCheck=False, Time=Time,
+                                   QuitTime=QuitTime, seq=Seq, chooseCouponId=chooseCouponId, payway=payway)
+        mWechatOrder.save()
+
+        xmlRequestData = self.arrayToXml(jsApiObj)
+        logging.debug(xmlRequestData)
+        f = urllib.request.urlopen("https://api.mch.weixin.qq.com/pay/unifiedorder",
+                                   bytes(xmlRequestData, encoding="utf8"), timeout=Config.HTTP_TIMEOUT)
+        content = f.read()
+        logging.debug(content)
+        strResultXml = self.xmlToArray(content.decode())
+
+        # prepay_id = strResultXml["prepay_id"]
+
+        retrunData = {}
+        retrunData["appId"] = self.get_appid(appid)
+        retrunData["nonceStr"] = strResultXml['nonce_str']
+        retrunData["package"] = "prepay_id=" + strResultXml.get("prepay_id")
+        retrunData["signType"] = "MD5"
+        retrunData["timeStamp"] = str(int(systemTime.time()))
+        retrunData["paySign"] = self.getSign(retrunData, appid)
+        respData = {"code": 1,
+                    "appId": retrunData["appId"],
+                    "timeStamp": retrunData["timeStamp"],
+                    "nonceStr": retrunData["nonceStr"],
+                    "package": retrunData["package"],
+                    "signType": retrunData["signType"],
+                    "paySign": retrunData["paySign"]
+                    }
+        return respData
+
+    def getWechatTokenFromDB(self, appid):
+        myKey = str(appid)
+
+        mWechatToken = WechatToken.objects(key=myKey).first()
+        if (mWechatToken != None):
+            curTime = int(systemTime.time())
+            outtime = int(mWechatToken.outtime)
+            isNeedUpdate = True
+            if (curTime >= outtime):  # 不需要更新
+                isNeedUpdate = True
+            else:  # 需要更新内容
+                isNeedUpdate = False
+
+            if (isNeedUpdate):
+                gettoken = self.getWechatToken(appid)
+                getticket = self.getWechatTicket(gettoken)
+                getnoncestr = self.random_str()
+                sysTime = int(systemTime.time())
+                getouttime = str(sysTime + 7200)
+                timestamp = str(sysTime)
+                mWechatToken.update(key=myKey, token=gettoken, ticket=getticket, outtime=getouttime,
+                                    noncestr=getnoncestr, timestamp=timestamp)
+
+        else:
+            gettoken = self.getWechatToken(appid)
+            getticket = self.getWechatTicket(gettoken)
+            getnoncestr = self.random_str()
+            sysTime = int(systemTime.time())
+            getouttime = str(sysTime + 7200)
+            timestamp = str(sysTime)
+            mWechatToken = WechatToken(key=myKey, token=gettoken, ticket=getticket, outtime=getouttime,
+                                       noncestr=getnoncestr, timestamp=timestamp)
+            mWechatToken.save()
+
+        mWechatToken = WechatToken.objects(key=myKey).first()
+        return mWechatToken
+
+    def handleCoupon(self, couponId, openId):
+        # 处理优惠券问题
+        if (len(couponId) <= 0):
+            return False
+
+        mUserCouponModel = UserCouponModel.objects(coupon_id=couponId, coupon_status=COUPON_STATUS_VAILD,
+                                                   wechat_openId=openId).first()
+        if (mUserCouponModel != None):
+            if (mUserCouponModel.receive_count > 0 and mUserCouponModel.receive_count == 1):
+                mUserCouponModel.update(coupon_id=couponId, coupon_status=COUPON_STATUS_USED, receive_count=0)
+            elif (mUserCouponModel.receive_count > 0 and mUserCouponModel.receive_count > 1):
+                mUserCouponModel.receive_count = mUserCouponModel.receive_count - 1
+                mUserCouponModel.update(coupon_id=couponId, receive_count=mUserCouponModel.receive_count)
+
+            # 提交已经使用掉的卡券数量
+            mCouponManagement = CouponManagement.objects(coupon_id=couponId).first()
+            if (mCouponManagement != None):
+                mCouponManagement.used_amount = mCouponManagement.used_amount + 1
+                mCouponManagement.update(coupon_id=couponId, used_amount=mCouponManagement.used_amount)
+
+        return True
+
+    def wechatCallback(self, return_code, out_trade_no):
+        if (return_code == "SUCCESS"):
+
+            mWechatOrder = WechatOrder.objects(out_trade_no=out_trade_no).first()
+            if (mWechatOrder != None and mWechatOrder.isCheck == False):
+                #cash_fee = float(float(cash_fee) / 100)
+                mUserOrder = UserOrder.objects(wechat_openId=mWechatOrder.openid, seq=mWechatOrder.seq).first()
+                if (mUserOrder != None):
+                    mWechatOrder.update(out_trade_no=out_trade_no, isCheck=True)
+                    if (mUserOrder != None and mUserOrder.isPaid == False):
+                        mUserOrder.update(isPaid=True, out_trade_no=out_trade_no)
+
+                        self.handleCoupon(mWechatOrder.chooseCouponId, mWechatOrder.openid)
+
+                        # elif (mUserOrder != None and mUserOrder.isPaid == True):
+                        #    newPrice = float(mUserOrder.price) + cash_fee
+                        #    newActualPrice = float(mUserOrder.ActualPrice) + cash_fee
+                        #    newTime = mUserOrder.time + mWechatOrder.Time
+                        #    mUserOrder.update(ticket = mWechatOrder.Ticket,
+                        #                      seq = mWechatOrder.seq,
+                        #                      price = str('%0.2f' % float(newPrice)),
+                        #                      ActualPrice = str('%0.2f' % float(newActualPrice)),
+                        #                      time = newTime,
+                        #                      quit_time = mWechatOrder.QuitTime,
+                        #                      pay_time=datetime.datetime.now())
+                        #
+                        #    self.handleCoupon(mWechatOrder.chooseCouponId, mWechatOrder.openid)
+                    if mUserOrder.payway == '1':
+                        logging.debug(mUserOrder.license_plate + ' ' + mUserOrder.ActualPrice)
+                        subinRespData = mBarCode.callServiceByLpn(mUserOrder.park_id, mUserOrder.license_plate,
+                                                                  float(mUserOrder.ActualPrice), "",
+                                                                  False)
+                    else:
+                        logging.debug(mUserOrder.ticket + ' ' + mUserOrder.ActualPrice)
+                        subinRespData = mBarCode.callService(mUserOrder.ticket, float(mUserOrder.ActualPrice), "",
+                                                             False)
+                    if (subinRespData["code"] == 1):  # success
+                        respData = {'return_code': "SUCCESS"}
+                        respData = self.arrayToXml(respData)
+                        return respData
+                    else:
+                        logging.warning("停车场服务失败:" + out_trade_no)
+                        respData = {'return_msg': "停车场服务失败!", 'return_code': "FAIL"}
+                        respData = self.arrayToXml(respData)
+                        return respData
+            else:
+                logging.warning("未知订单:" + out_trade_no)
+                respData = {'return_msg': "未知订单", 'return_code': "FAIL"}
+                respData = self.arrayToXml(respData)
+                return respData
+        else:
+            # return_msg = request.form.get('return_msg')
+            # print ("支付失败"+str(return_msg))
+            logging.warning("支付失败" )
+
+        respData = {'return_code': "SUCCESS"}
+        respData = self.arrayToXml(respData)
+        return respData
+
+    def get_appid(self, appid):
+        if appid != None:
+            return appid
+        else:
+            return Config.WECHAT_APPID
+
+    def get_wechat_secret(self, appid):
+        if appid != None:
+            company = PropertyCompany.objects(wechat_appid=appid).first()
+            if company and company.wechat_secret != None:
+                return str(company.wechat_secret)
+            else:
+                return Config.WECHAT_SECRET
+        else:
+            return Config.WECHAT_SECRET
+
+    def get_wechat_mch_id(self):
+            return Config.WECHAT_MCH_ID
+
+    def get_wechat_sub_mch_id(self, parkid, ticket):
+        is_direct = False  # 直接支付第三方
+        sub_mch_id = None
+        if parkid == None or len(parkid) != 4:
+            if ticket != None:
+                parkid = ticket[0:4]
+        logging.debug(parkid + ' ' + ticket)
+        park = ParkManagement.objects(park_id=parkid).first()
+        property = park.company
+        if property and property.wechat_mch_id != None:
+            sub_mch_id = str(property.wechat_mch_id)
+            is_direct = (property.wechat_account_type[0:1] == '1')
+        return (is_direct, sub_mch_id)
+
+    def get_wechat_key(self, appid):
+        if appid != None:
+            company = PropertyCompany.objects(wechat_appid=appid).first()
+
+            if company and company.wechat_m_api_key != None:
+                return str(company.wechat_m_api_key)
+            else:
+                return Config.KEY
+        else:
+            return Config.KEY

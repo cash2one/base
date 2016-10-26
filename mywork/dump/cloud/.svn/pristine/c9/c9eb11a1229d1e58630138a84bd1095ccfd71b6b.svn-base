@@ -1,0 +1,123 @@
+# coding: utf-8
+import os
+
+
+class Config(object):
+    """Base config class."""
+    # Flask app config
+    DEBUG = False
+    TESTING = False
+    SECRET_KEY = "\xb5\xb3}#\xb7A\xcac\x9d0\xb6\x0f\x80z\x97\x00\x1e\xc0\xb8+\xe9)\xf0}"
+
+    # Root path of project
+    PROJECT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+    # Site domain
+    SITE_TITLE = "速宾停车云支付管理平台"
+    SITE_DOMAIN = "http://localhost:5000"
+
+    # 西图云支付链接请求签名KEY
+    CYTEL_KEY = "8934e7d15453e97507ef794cf7b0519d"
+
+    MONGODB_SETTINGS = {'DB': "park"}
+
+    BABEL_DEFAULT_LOCALE = 'zh_Hans_CN'
+    SUPPORT_THIRD_PART = False
+
+    SECURITY_PASSWORD_HASH = 'bcrypt'
+    SECURITY_PASSWORD_SALT = 'subin'
+    SECURITY_USER_IDENTITY_ATTRIBUTES = 'username'
+    SECURITY_POST_LOGIN_VIEW = '/admin'
+    SECURITY_POST_CHANGE_VIEW = '/admin'
+    SECURITY_LOGIN_WITHOUT_CONFIRMATION = True
+    SECURITY_CHANGEABLE = True
+    SECURITY_SEND_PASSWORD_CHANGE_EMAIL = False
+
+    SECURITY_MSG_DISABLED_ACCOUNT = ('账号已被禁用', 'error')
+    SECURITY_MSG_INVALID_PASSWORD = ('密码错误', 'error')
+    SECURITY_MSG_INVALID_REDIRECT = ('转向错误', 'error')
+    SECURITY_MSG_LOGIN = ('请登录', 'error')
+    SECURITY_MSG_LOGIN_EXPIRED = ('登录超时', 'error')
+    SECURITY_MSG_PASSWORDLESS_LOGIN_SUCCESSFUL = ('无密码登录成功', 'error')
+    SECURITY_MSG_PASSWORD_CHANGE = ('密码修改', 'error')
+    SECURITY_MSG_PASSWORD_INVALID_LENGTH = ('密码不能少于6位', 'error')
+    SECURITY_MSG_PASSWORD_IS_THE_SAME = ('密码和原密码相同', 'error')
+    SECURITY_MSG_PASSWORD_MISMATCH = ('输入密码不匹配', 'error')
+    SECURITY_MSG_PASSWORD_NOT_PROVIDED = ('密码不能为空', 'error')
+    SECURITY_MSG_PASSWORD_NOT_SET = ('密码没有设置', 'error')
+    SECURITY_MSG_PASSWORD_RESET = ('密码重置', 'error')
+    SECURITY_MSG_PASSWORD_RESET_EXPIRED = ('密码重置过期', 'error')
+    SECURITY_MSG_PASSWORD_RESET_REQUEST = ('密码重置请求', 'error')
+    SECURITY_MSG_REFRESH = ('刷新', 'error')
+    SECURITY_MSG_RETYPE_PASSWORD_MISMATCH = ('两次输入密码不匹配', 'error')
+    SECURITY_MSG_UNAUTHORIZED = ('未授权', 'error')
+    SECURITY_MSG_USER_DOES_NOT_EXIST = ('用户不存在', 'error')
+
+    ###################Test/PreRelease######################
+    # WECHAT_APPID = "wxc899ff64ac0dec33"
+    # WECHAT_SECRET = "f6cb95a4736c83ceb43e0ad337a85c99"
+    # WECHAT_MCH_ID = "1351212401"
+    # KEY = "CRFJ0HLZK8XBQGTM45O9NI3UWA7VD21S"
+    #####################Test################################
+    # AUTH_URL_SCAN = "http://subin.iask.in/ParkingScan.html"  # 微信授权回调页面
+    # AUTH_URL_LOGIN = "http://subin.iask.in/ParkingLogin.html"
+    # AUTH_URL_TICKET = "http://subin.iask.in/ParkingChoosePayAuthorize.html"
+    #####################PreRelease##########################
+    # AUTH_URL_SCAN = "http://itooler.cn/p/ParkingScan.html"  # 微信授权回调页面
+    # AUTH_URL_LOGIN = "http://itooler.cn/p/ParkingLogin.html"
+    # AUTH_URL_COUPON = "http://itooler.cn/p/ParkingCenterCoupon.html"
+    # AUTH_URL_LPN = "http://itooler.cn/p/ParkingLPN.html"
+    # AUTH_URL_TICKET = "http://itooler.cn/p/ParkingChoosePayAuthorize.html"  # 二维码方式授权
+    ###################Release##############################
+    WECHAT_APPID = "wxd396e26e8729f0d1"
+    WECHAT_SECRET = "a40b028e9974d5da8589a86d0a423888"
+    WECHAT_MCH_ID = "1264052801"    # 商户号
+    WECHAT_SERVICE_MCH_ID = "1282792001 "  # 服务商号
+    KEY = "A82Dfdks32sbkkt5454hhsj376gfnmx2"
+    ####################Release##############################
+    # http://www.subinwechat.com映射到http://139.196.106.245:80
+    AUTH_URL_SCAN = "http://www.subinwechat.com/p/ParkingScan.html"  # 微信授权回调页面
+    AUTH_URL_LOGIN = "http://www.subinwechat.com/p/ParkingLogin.html"
+    AUTH_URL_COUPON = "http://www.subinwechat.com/p/ParkingCenterCoupon.html"
+    AUTH_URL_LPN = "http://www.subinwechat.com/p/ParkingLPN.html"
+    AUTH_URL_TICKET = "http://www.subinwechat.com/p/ParkingChoosePayAuthorize.html"  # 二维码方式授权
+    #########################################################
+
+
+    # http://ad.subinwechat.com映射到http://139.196.106.245:5000
+    # WECHAT_PAY_NOTIFY_URL = "http://ad.itooler.cn/wechat/wxpayAction"  # 微信支付时的notify_url
+    WECHAT_PAY_NOTIFY_URL = "http://ad.subinwechat.com/wechat/wxpayAction"  # 微信支付时的notify_url
+    WECHAT_PAY_BODY = '停车费支付'
+    WECHAT_PAY_ATTACH = '停车费支付'
+    WECHAT_GOODS_TAGS='byczr'
+
+    # 合作身份者ID, 以2088开头由16位纯数字组成的字符串
+    ALI_PARTNER = '2088121858181418'
+    # 交易安全校验码, 由数字和字母组成的32位字符串
+    # 如果签名方式设置为"MD5"时, 请设置该参数
+    ALI_MD5_KEY = 'bmyyy7e4jbmiobicjovljxyfsa66e4n7'
+    ALI_IP_ADDRESS = "http://ad.subinwechat.com"
+    # ALI_IP_ADDRESS = "http://ad.itooler.cn"
+    ALI_ACCOUNT = "admin@subin.cn"
+    # 商户的私钥
+    # 如果签名方式设置为"0001", 请设置该参数
+    ALI_PRIVATE_KEY = ''
+    # 支付宝的公钥
+    # 如果签名方式设置为"0001", 请设置该参数
+    ALI_PUBLIC_KEY = ''
+    # 调式用, 创建TXT日志文件夹路径
+    ALI_LOG_PATH = '~/'
+    # 字符编码格式 目前支持 utf-8
+    ALI_INPUT_CHARSET = 'utf-8'
+    # 签名方式, 选择项: 0001(RSA), MD5
+    ALI_SIGN_TYPE = 'MD5'
+
+
+    #部署地址,fabric用
+    GIT_ADDRESS = "http://subin@stash.hongfu001.com:7990/scm/park/parkserver.git"
+    HOST_STRING = "root@www.subinwechat.com:22"
+    HOST_KEY_FILENAME = "~/.ssh/id_rsa"
+
+    # HTTP请求超时时间
+    HTTP_TIMEOUT = 30
+    

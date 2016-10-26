@@ -1,0 +1,4 @@
+1.用户输入车牌号码 ：A12345.
+2.原来查询车牌的协议比如:Seq=895000001&Request=TicketPrice&Ticket=0001.0001.0001.00
+   现在用车牌查询协议,比如:Seq=895000001&Request=TicketPrice&Ticket=PA12345,在实际车牌前加上P就可以了
+其他接口一样的都是Ticket这个字段改成了P加上车牌。

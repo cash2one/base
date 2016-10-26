@@ -1,0 +1,39 @@
+﻿<?xml version="1.0"?>
+<configuration>
+  <configSections>
+    <section name="unity" type="Microsoft.Practices.Unity.Configuration.UnityConfigurationSection,Microsoft.Practices.Unity.Configuration"/>
+  </configSections>
+  <unity xmlns="http://schemas.microsoft.com/practices/2010/unity">
+    <!--定义类型别名-->
+    <aliases>
+      <add alias="IListener" type="Cytel.Cloud.DataUPloadService.ListenerIF.IListener,Cytel.Cloud.DataUPloadService.ListenerIF" />
+      <add alias="VBM" type="Cytel.Cloud.DataUPloadService.VBM.VBMListener,Cytel.Cloud.DataUPloadService.VBM" />
+      <add alias="BOSS" type="Cytel.Cloud.DataUPloadService.BOSS.BOSSListener,Cytel.Cloud.DataUPloadService.BOSS" />
+    </aliases>
+    <container>
+      <!--映射关系-->
+      <!--register type="full class name,namespace"-->
+      <register type="IListener" mapTo="VBM">
+        <lifetime type="singleton"/>
+      </register>
+    </container>
+  </unity>
+  <startup>
+    <supportedRuntime version="v2.0.50727"/>
+  </startup>
+  <appSettings>
+    <!--监听端口-->
+    <add key="ListenPort" value="4050"/>
+    <!--服务器IP地址-->
+    <add key="MC3HostName" value="192.168.2.102"/>
+
+    <!--业务请求URL-->
+    <add key="PostURL" value="service/api/v1/uploaddata"/>
+
+    <!--停车场编号-->
+    <add key="Park_ID" value="001323"/>
+
+    <!--秘钥由速宾分配-->
+    <add key="Serect" value="866585558226OPKE8EFE9873"/>
+  </appSettings>
+</configuration>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+		<title>支付完成</title>
+		<script src="js/jquery.min.js"></script>
+		<script src="bootstrap/dist/js/bootstrap.min.js"></script>
+		<link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+		<script src="https://res.wx.qq.com/open/js/jweixin-1.0.0.js"> </script>
+		<link type="text/css" href="css/ParkingCSS.css" rel="stylesheet" />
+		<script src="js/config.js"></script>
+	</head>
+	<body class="html_body">
+		<div id="container" >
+			<div id="content_body" >
+				<div style="text-align:center; margin-bottom: 10px;">
+					<img id = "top_image" src="img/pay_success.png"  />
+				</div>
+				<div id = "success_div">
+					<p style="font-size: 15px;margin-bottom: 5px;" >谢谢!</p>
+				
+					<p style="font-size: 15px;margin-bottom: 5px;"><label id = "seq" style="color: #2a2afd;font-size: 15px;">订单号：</label>的停车费已支付完成。</p>
+					
+					<p style="font-size: 15px;margin-bottom: 5px;" hidden="true">谢谢!您的停车费用已经支付完成!</p>
+					<p style="font-size: 15px;margin-bottom: 0px;">温馨提示：</p>
+					<p style="font-size: 15px;margin-bottom: 5px;">请您在支付完成后的<label id = "time" style="font-size: 15px;">20</label>分钟内驶离停车场，逾期系统将重新计费，您可通过再次扫描或输入停车票号进行支付。</p>
+					
+					<p style="font-size: 15px;margin-bottom: 5px;"hidden="true">感谢您的配合!</p>
+					
+					
+				</div>
+				
+				<div id = "zero_div">
+					<p style="font-size: 15px;margin-bottom: 5px;" >谢谢!</p>
+					<br />
+					<p style="font-size: 15px;margin-bottom: 0px;">温馨提示：</p>
+					<p style="font-size: 15px;margin-bottom: 0px;">您的停车服务还在免费期间，请尽快离场。</p>
+					<p style="font-size: 15px;margin-bottom: 15px;">如需帮助请咨询服务中心。</p>
+					<br />
+				</div>
+				
+				<div style="margin:0 auto;text-align:center;margin-top: 10px;">
+					<button id = "ok_btn" type="button" class="btn btn-primary btn-lg" style="width: 100%;font-size: 18px;color: #ffffff;">确定</button>
+				</div>
+				<div style="margin:0 auto;text-align:center;margin-top: 10px;" id ="get_bill_div">
+					<button id = "get_bill" type="button" class="btn btn-primary btn-lg" style="width: 100%;font-size: 18px;color: #ffffff;">领取发票</button>
+				</div>
+				<div id = "invoice_data_div" style="text-align:left; margin-top:15px;"></div>
+			</div>
+			<div id="footing" style="text-align:center;">
+				 Powered by: <img id="logo" src="img/logo.png" width="30" height="12" /> Copyright ©2016
+			</div>
+		</div>
+	</body>
+</html>
+
+<script type="text/javascript">
+	var getTicket = getQueryStr("ticket", "");
+	var getSeq = getQueryStr("get_Seq", "");
+	var getbill = getQueryStr("getbill", "True");
+	var getLpn = getQueryStr("lpn", "");
+	var nr = getQueryStr("nr", "10000");
+	var getInvoice;
+	init ();
+ 	function init ()
+ 	{
+		// 替换按钮颜色和LOGO图标
+		var syscolor = window.localStorage.getItem('syscolor');
+		if(syscolor)
+		{
+			var btnNodes = document.querySelectorAll('.btn-primary');
+			if(btnNodes)
+			{
+				for(var i=0; i < btnNodes.length; i++)
+				{
+					if(btnNodes[i])
+					{
+						btnNodes[i].style.backgroundColor = syscolor;
+						btnNodes[i].style.borderColor = syscolor;
+					}
+				}
+			}
+		}
+		
+		if(syscolor == '#50c646')
+		{
+			if(LOGO_CUSTOMIZED)
+				document.getElementById('logo').src = "img/" + system + "_logo.png";
+			else
+				document.getElementById('logo').src = "img/logo2.png";
+		}
+		
+ 		setData ();
+		setInvoiceInfo();
+ 		
+		var content_body = document.getElementById("content_body");
+   		var footingHeight = document.getElementById("footing").offsetHeight;
+   		content_body.style.height=(window.innerHeight - footingHeight - content_body.getBoundingClientRect().top)+"px";
+   	}
+	
+	function setInvoiceInfo()
+	{
+		var parkId = window.localStorage.getItem("system");
+		if(parkId)
+		{
+			$.post(my_ip_address + "/invoice/get_invoice_setting",{'parkId':parkId}, function(data)
+			{
+				getInvoice=eval("("+data+")");
+				if(getInvoice && getInvoice.code == 1)
+				{
+					if(getInvoice.invoice_switch == '关闭')
+					{
+						document.getElementById("get_bill_div").hidden = true;
+					}
+					else
+					{
+						document.getElementById("get_bill_div").hidden = false;
+					}
+					document.getElementById("invoice_data_div").innerHTML = getInvoice.invoice_prompt_data;
+					document.getElementById("get_bill").innerHTML = getInvoice.invoice_btn_name;
+				}
+				else if(getbill == "False")
+				{
+					document.getElementById("get_bill_div").hidden = true;
+				}
+				else
+				{
+					document.getElementById("get_bill_div").hidden = false;
+				}
+			});
+		}
+	}
+ 	
+ 	function setData ()
+ 	{
+		var topImage = document.getElementById("top_image");
+   		if (nr == "1")
+		{
+			topImage.src = "img/pay_zero.png"
+			document.getElementById("get_bill_div").hidden = true;
+			document.getElementById("success_div").hidden = true;
+			document.getElementById("zero_div").hidden = false;
+		}
+		else 
+		{
+			document.getElementById("success_div").hidden = false;
+			document.getElementById("zero_div").hidden = true;
+			topImage.src = "img/pay_success.png"
+	   		document.getElementById("seq").innerText = "订单号："+ getSeq;
+
+	   		if (getbill == "False")
+	   		{
+	   			document.getElementById("get_bill_div").hidden = true;
+	   		}
+	   		else 
+	   		{
+	   			document.getElementById("get_bill_div").hidden = false;
+	   		}
+	   		
+	   		document.getElementById("time").innerText = "20";
+	   		var openId = window.localStorage.getItem(my_appid+"openId");
+			var parkId = window.localStorage.getItem("system");
+			var payway = window.localStorage.getItem('payway');
+	   		$.post(my_ip_address + "/user/get_QuiteTime", {'seq' :getSeq,'ticket' :getTicket, 'openId':openId, 'lpn' :getLpn, 'parkId': parkId, 'payway': payway}, function(data) 
+			{
+				data=eval("("+data+")");
+				if (data.code == RESULT_SUCCESS)
+				{
+					document.getElementById("time").innerText = data.quiteTime;
+					document.getElementById("seq").innerText = "订单号："+ data.seq;
+				}
+				else 
+				{
+					document.getElementById("time").innerText = "20";
+				}
+			});
+		}
+ 	}
+ 	document.getElementById("ok_btn").onclick = function()
+ 	{
+ 		wx.closeWindow();
+ 	}
+ 	document.getElementById("get_bill").onclick = function()
+ 	{
+ 		window.location.href = "ParkingGetBill.html?get_Seq="+getSeq;
+		if(getInvoice && getInvoice.invoice_prompt_url)
+			window.location.href = getInvoice.invoice_prompt_url;
+ 	}
+ 	
+ 	function getQueryStr(str, noValue)
+	{
+		var reg = new RegExp("(^|&)"+ str +"=([^&]*)(&|$)");
+	    var r 	= window.location.search.substr(1).match(reg);
+	    if (r!=null) 
+	    		return unescape(r[2]); 
+	    	return noValue;
+	};
+</script>

@@ -1,0 +1,136 @@
+from flask import Flask
+from flask import send_from_directory
+from flask.ext.security import Security
+from flask_babelex import Babel
+import flask_admin.consts
+from app.models import *
+from app.views import *
+
+
+from config import load_config
+
+# 初始化 App
+app = Flask(__name__)
+
+config = load_config()
+app.config.from_object(config)
+db.init_app(app)
+
+babel = Babel(app)
+
+# if not app.debug:
+#     app.logger.addHandler(logging.StreamHandler())
+#     app.logger.setLevel(logging.debug)
+# logging.basicConfig(level=logging.debug,
+#                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+#                     datefmt='%a, %d %b %Y %H:%M:%S',
+#                     filename='myapp.log',
+#                     filemode='w')
+#
+# #################################################################################################
+# # 定义一个StreamHandler，将INFO级别或更高的日志信息打印到标准错误，并将其添加到当前的日志处理对象#
+# console = logging.StreamHandler()
+# console.setLevel(logging.INFO)
+# formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+# console.setFormatter(formatter)
+# logging.getLogger('').addHandler(console)
+# #################################################################################################
+#
+# logging.debug('This is debug message')
+# logging.info('This is info message')
+# logging.warning('This is warning message')
+
+security = Security(app, user_datastore)
+
+user_datastore.find_or_create_role(name='SuperAdmin', description='超级管理员')
+user_datastore.find_or_create_role(name='PropertyAdmin', description='物业公司管理员')
+user_datastore.find_or_create_role(name='ParkAdmin', description='停车场管理员')
+user_datastore.find_or_create_role(name='ParkOperator', description='停车场操作员')
+user_datastore.find_or_create_role(name='ParkAccountant', description='停车场财务员')
+
+
+@app.before_first_request
+def create_user():
+    if not user_datastore.find_user(username='admin'):
+        hashed_password = utils.encrypt_password('admin')
+        user = user_datastore.create_user(username='admin', password=hashed_password)
+        user_datastore.add_role_to_user(user, 'SuperAdmin')
+
+from .route import *
+from .myAli import *
+
+# bower_components
+@app.route('/bower_components/<path:path>')
+def send_bower(path):
+    return send_from_directory(os.path.join(app.root_path, 'bower_components'), path)
+
+
+@app.route('/dist/<path:path>')
+def send_dist(path):
+    return send_from_directory(os.path.join(app.root_path, 'dist'), path)
+
+
+@app.route('/js/<path:path>')
+def send_js(path):
+    return send_from_directory(os.path.join(app.root_path, 'js'), path)
+
+#@app.route('/m/<path:path>')
+#def send_html(path):
+#    return send_from_directory(os.path.join(app.root_path, 'm'),path)
+
+# Flask views
+@app.route('/')
+def index():
+    return render_template("sb-admin/redirect.html")
+
+
+# Create admin
+admin = flask_admin.Admin(app,
+                          '速宾停车云支付管理平台',
+                          index_view=AdminIndexView(
+                                  menu_icon_type=flask_admin.consts.ICON_TYPE_FONT_AWESOME,
+                                  menu_icon_value='fa fa-home fa-fw'),
+                          template_mode='bootstrap3',
+                          )
+
+admin.add_view(ModelView_PropertyCompany('物业公司管理',
+                                         menu_icon_type=flask_admin.consts.ICON_TYPE_FONT_AWESOME,
+                                         menu_icon_value='fa fa-building fa-fw'))
+
+admin.add_view(ModelView_ParkManagement('停车场管理',
+                                        menu_icon_type=flask_admin.consts.ICON_TYPE_FONT_AWESOME,
+                                        menu_icon_value='fa fa-pinterest fa-fw',
+                                        roles_accepted=['PropertyAdmin']))
+
+admin.add_view(ModelView_ParkUser('用户管理',
+                                  menu_icon_type=flask_admin.consts.ICON_TYPE_FONT_AWESOME,
+                                  menu_icon_value='fa fa-user fa-fw',
+                                  ))
+
+admin.add_view(ModelView_UserOrder('收费明细',
+                                   menu_icon_type=flask_admin.consts.ICON_TYPE_FONT_AWESOME,
+                                   menu_icon_value='fa fa-money fa-fw',
+                                   roles_accepted=['PropertyAdmin', 'ParkAdmin', 'ParkOperator', 'ParkAccountant']))
+
+admin.add_view(ModelView_CouponManagement('卡券管理',
+                                          menu_icon_type=flask_admin.consts.ICON_TYPE_FONT_AWESOME,
+                                          menu_icon_value='fa fa-ticket fa-fw',
+                                          roles_accepted=['PropertyAdmin', 'ParkAdmin']))
+
+admin.add_view(ModelView_InvoiceManagement('发票管理',
+                                           menu_icon_type=flask_admin.consts.ICON_TYPE_FONT_AWESOME,
+                                           menu_icon_value='fa fa-tag fa-fw',
+                                           roles_accepted=['PropertyAdmin', 'ParkAdmin']))
+
+admin.add_view(ModelView_DiscountManagement('折扣管理',
+                                            menu_icon_type=flask_admin.consts.ICON_TYPE_FONT_AWESOME,
+                                            menu_icon_value='fa fa-cc fa-fw',
+                                            roles_accepted=['PropertyAdmin', 'ParkAdmin']))
+
+admin.add_view(ModelView_ParkAdmin('管理员',
+                                   menu_icon_type=flask_admin.consts.ICON_TYPE_FONT_AWESOME,
+                                   menu_icon_value='fa fa-user-md fa-fw',
+                                   roles_accepted=['PropertyAdmin', 'ParkAdmin']))
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', debug=True, threaded=True)

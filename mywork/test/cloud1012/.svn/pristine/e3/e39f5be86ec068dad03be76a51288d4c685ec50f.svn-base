@@ -1,0 +1,46 @@
+{% extends "sb-admin/pages/list.html" %}}
+
+
+{% block edit %}
+    {%- if admin_view.can_do_edit(row)-%}
+        {%- if admin_view.edit_modal -%}
+            {{ lib.add_modal_button(url=get_url('.edit_view', id=get_pk_value(row), url=return_url, modal=True), title=_gettext('Edit Record'), content='<span class="glyphicon glyphicon-pencil"></span>') }}
+        {% else %}
+            <a class="icon"
+               href="{{ get_url('.edit_view', id=get_pk_value(row), url=return_url) }}"
+               title="{{ _gettext('Edit Record') }}">
+                <span class="glyphicon glyphicon-pencil"></span>
+            </a>
+        {%- endif -%}
+    {%- endif -%}
+    {%- if admin_view.can_do_edit(row)-%}
+        {%- if admin_view.can_delete -%}
+            <form class="icon" method="POST" action="{{ get_url('.delete_view') }}">
+                {{ delete_form.id(value=get_pk_value(row)) }}
+                {{ delete_form.url(value=return_url) }}
+                {% if delete_form.csrf_token %}
+                    {{ delete_form.csrf_token }}
+                {% elif csrf_token %}
+                    <input type="hidden" name="csrf_token"
+                           value="{{ csrf_token() }}"/>
+                {% endif %}
+                <button onclick="return confirm('{{ _gettext('Are you sure you want to delete this record?') }}');"
+                        title="{{ _gettext('Delete record') }}">
+                    <span class="glyphicon glyphicon-trash"></span>
+                </button>
+            </form>
+        {%- endif -%}
+    {%- endif -%}
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

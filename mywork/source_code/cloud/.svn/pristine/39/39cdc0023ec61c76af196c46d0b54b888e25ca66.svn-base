@@ -1,0 +1,94 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WCF", "WCF", "{63458B24-DD4C-45C8-B6AC-56981C6FED95}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Host", "Host", "{E22DCAE9-1459-4D15-91B8-96083B6161D3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{685FE73D-39C8-4166-BA1E-3B153B8D66F3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Biz", "Biz", "{81DD4DCA-4E4C-44F0-AEB3-249FDF446940}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cytel.Cloud.DataInteractiveService.Contract", "Cytel.Cloud.DataInteractiveService.Contract\Cytel.Cloud.DataInteractiveService.Contract.csproj", "{27ED5626-E9E8-4A21-8F25-78DD21149454}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cytel.Cloud.DataInteractiveService.Service", "Cytel.Cloud.DataInteractiveService.Service\Cytel.Cloud.DataInteractiveService.Service.csproj", "{681023F4-3794-46A9-8C4B-F031FEDDD068}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cytel.Cloud.DataInteractiveService.Model", "Cytel.Cloud.DataInteractiveService.Model\Cytel.Cloud.DataInteractiveService.Model.csproj", "{0B6D8189-6D00-48A3-9366-CEE64BBC2172}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cytel.Cloud.DataInteractiveService.HZ", "Cytel.Cloud.DataInteractiveService.Business\Cytel.Cloud.DataInteractiveService.HZ.csproj", "{04D64198-DB0B-4958-808D-32D10DD92A3D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cytel.Cloud.DataInteractiveService.BizIF", "Cytel.Cloud.DataInteractiveService.BusinessInterface\Cytel.Cloud.DataInteractiveService.BizIF.csproj", "{F367063A-3689-4CFD-A356-84FA535DEDD1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cytel.Cloud.DataInteractiveService.SH", "Cytel.Cloud.DataInteractiveService.SH\Cytel.Cloud.DataInteractiveService.SH.csproj", "{4D69FBE3-C096-4565-A946-D4000F64E706}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cytel.Cloud.DataInteractiveService.Model_HZ", "Cytel.Cloud.DataInteractiveService.Model_HZ\Cytel.Cloud.DataInteractiveService.Model_HZ.csproj", "{D6660884-7788-4500-A92F-975F6FFFE33F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cytel.Cloud.DataInteractiveService.Model_SH", "Cytel.Cloud.DataInteractiveService.Model_SH\Cytel.Cloud.DataInteractiveService.Model_SH.csproj", "{787EAE5E-E2E6-4893-B9A2-159F8456C1DD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cytel.Cloud.DataInteractiveService.ExeHost", "Cytel.Cloud.DataInteractiveService.ExeHost\Cytel.Cloud.DataInteractiveService.ExeHost.csproj", "{7C2ECC22-B644-4B8D-8229-2D6AEA9F91A1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cytel.Cloud.DataInteractiveService.IISHost", "IISHost\Cytel.Cloud.DataInteractiveService.IISHost.csproj", "{644A5271-0006-4C86-9756-9A421576D597}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{27ED5626-E9E8-4A21-8F25-78DD21149454}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27ED5626-E9E8-4A21-8F25-78DD21149454}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27ED5626-E9E8-4A21-8F25-78DD21149454}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27ED5626-E9E8-4A21-8F25-78DD21149454}.Release|Any CPU.Build.0 = Release|Any CPU
+		{681023F4-3794-46A9-8C4B-F031FEDDD068}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{681023F4-3794-46A9-8C4B-F031FEDDD068}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{681023F4-3794-46A9-8C4B-F031FEDDD068}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{681023F4-3794-46A9-8C4B-F031FEDDD068}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B6D8189-6D00-48A3-9366-CEE64BBC2172}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B6D8189-6D00-48A3-9366-CEE64BBC2172}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B6D8189-6D00-48A3-9366-CEE64BBC2172}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B6D8189-6D00-48A3-9366-CEE64BBC2172}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04D64198-DB0B-4958-808D-32D10DD92A3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04D64198-DB0B-4958-808D-32D10DD92A3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04D64198-DB0B-4958-808D-32D10DD92A3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04D64198-DB0B-4958-808D-32D10DD92A3D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F367063A-3689-4CFD-A356-84FA535DEDD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F367063A-3689-4CFD-A356-84FA535DEDD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F367063A-3689-4CFD-A356-84FA535DEDD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F367063A-3689-4CFD-A356-84FA535DEDD1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D69FBE3-C096-4565-A946-D4000F64E706}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D69FBE3-C096-4565-A946-D4000F64E706}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D69FBE3-C096-4565-A946-D4000F64E706}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D69FBE3-C096-4565-A946-D4000F64E706}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6660884-7788-4500-A92F-975F6FFFE33F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6660884-7788-4500-A92F-975F6FFFE33F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6660884-7788-4500-A92F-975F6FFFE33F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6660884-7788-4500-A92F-975F6FFFE33F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{787EAE5E-E2E6-4893-B9A2-159F8456C1DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{787EAE5E-E2E6-4893-B9A2-159F8456C1DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{787EAE5E-E2E6-4893-B9A2-159F8456C1DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{787EAE5E-E2E6-4893-B9A2-159F8456C1DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C2ECC22-B644-4B8D-8229-2D6AEA9F91A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C2ECC22-B644-4B8D-8229-2D6AEA9F91A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C2ECC22-B644-4B8D-8229-2D6AEA9F91A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C2ECC22-B644-4B8D-8229-2D6AEA9F91A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{644A5271-0006-4C86-9756-9A421576D597}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{644A5271-0006-4C86-9756-9A421576D597}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{644A5271-0006-4C86-9756-9A421576D597}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{644A5271-0006-4C86-9756-9A421576D597}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{27ED5626-E9E8-4A21-8F25-78DD21149454} = {63458B24-DD4C-45C8-B6AC-56981C6FED95}
+		{681023F4-3794-46A9-8C4B-F031FEDDD068} = {63458B24-DD4C-45C8-B6AC-56981C6FED95}
+		{7C2ECC22-B644-4B8D-8229-2D6AEA9F91A1} = {E22DCAE9-1459-4D15-91B8-96083B6161D3}
+		{644A5271-0006-4C86-9756-9A421576D597} = {E22DCAE9-1459-4D15-91B8-96083B6161D3}
+		{0B6D8189-6D00-48A3-9366-CEE64BBC2172} = {685FE73D-39C8-4166-BA1E-3B153B8D66F3}
+		{D6660884-7788-4500-A92F-975F6FFFE33F} = {685FE73D-39C8-4166-BA1E-3B153B8D66F3}
+		{787EAE5E-E2E6-4893-B9A2-159F8456C1DD} = {685FE73D-39C8-4166-BA1E-3B153B8D66F3}
+		{04D64198-DB0B-4958-808D-32D10DD92A3D} = {81DD4DCA-4E4C-44F0-AEB3-249FDF446940}
+		{F367063A-3689-4CFD-A356-84FA535DEDD1} = {81DD4DCA-4E4C-44F0-AEB3-249FDF446940}
+		{4D69FBE3-C096-4565-A946-D4000F64E706} = {81DD4DCA-4E4C-44F0-AEB3-249FDF446940}
+	EndGlobalSection
+EndGlobal

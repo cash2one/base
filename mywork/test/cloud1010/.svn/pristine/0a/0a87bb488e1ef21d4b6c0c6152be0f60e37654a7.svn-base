@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  	<meta charset="utf-8">
+  	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+  	<title>停车缴费</title>
+	<script src="js/jquery.min.js"></script>
+	<script src="bootstrap/dist/js/bootstrap.min.js"></script>
+	<script src="https://res.wx.qq.com/open/js/jweixin-1.0.0.js"> </script>
+	<script src="js/config.js"></script>
+	<script src="js/MyJSTools.js"></script>
+	<link rel="stylesheet" href="css/ParkingLoadingStyle.css" />
+	<link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link type="text/css" href="css/ParkingCSS.css" rel="stylesheet" />
+</head>
+<body class="html_body">
+	<div id = "loading" hidden="true" style="text-align:center;">
+		<div class="sk-circle" style="margin-top: 50%; margin-bottom: 50%;">
+	        <div class="sk-circle1 sk-child"></div>
+	        <div class="sk-circle2 sk-child"></div>
+	        <div class="sk-circle3 sk-child"></div>
+	        <div class="sk-circle4 sk-child"></div>
+	        <div class="sk-circle5 sk-child"></div>
+	        <div class="sk-circle6 sk-child"></div>
+	        <div class="sk-circle7 sk-child"></div>
+	        <div class="sk-circle8 sk-child"></div>
+	        <div class="sk-circle9 sk-child"></div>
+	        <div class="sk-circle10 sk-child"></div>
+	        <div class="sk-circle11 sk-child"></div>
+	        <div class="sk-circle12 sk-child"></div>
+      	</div>
+	</div>
+	<div id="container" >
+		<div id="content_body" >
+			<div style="margin:0 auto;text-align:center;margin-top: 10px;margin-bottom: 10px;">
+				<!--<p>请将停车票上的条形码</p>
+				<p>放置在扫描框内</p>-->
+				<img id="scan_image"src="img/scan_image.png" />
+			</div>
+			
+			<div style="margin:0 auto;text-align:center">
+				<button id = "scan_coupon_btn" type="button" class="btn btn-primary btn-lg" style="width: 100%;">扫描停车票</button>
+			</div>
+			
+			<div class="input-group input-group-lg" style="margin-top: 10px;margin-bottom: 10px;">
+				<input id = "ticket_input" type="text" class="form-control" placeholder="请输入停车票号" aria-describedby="basic-addon2" >
+				<span class="input-group-btn"> <button id="ok_button" class="btn btn-primary" type="button" >确定</button> </span>
+			</div>
+			
+			<div >
+				<p style="margin-top: 5px;">步骤1：扫描或直接输入停车票</p>
+				<p style="margin-top: 5px;">步骤2：确认停车费用并支付</p>
+				<p style="margin-top: 5px;">步骤3：请在支付成功后尽快离场</p>
+			</div>
+		</div>
+		<div id="footing" style="text-align:center;">
+			Powered by: <img id="logo" src="" width="30" height="12" />  Copyright ©2016
+		</div>
+	</div>
+</body>
+</html>
+
+
+
+<script>
+	var loading = document.getElementById("loading");
+	var container = document.getElementById("container");
+	
+	var scan_image = document.getElementById("scan_image");
+
+	var ticket_input= document.getElementById("ticket_input");
+	var scan_coupon_btn = document.getElementById("scan_coupon_btn");
+	var ok_button = document.getElementById("ok_button");
+	
+	init();
+	function init ()
+	{
+		window.localStorage.setItem("payway", '0');
+//		var title = window.localStorage.getItem("title");
+//		if (title != null && title.length >0)
+//		{
+//			document.title = title;
+//		}
+		
+		// 替换按钮颜色和LOGO图标
+		var syscolor = window.localStorage.getItem('syscolor');
+		if(syscolor == '#50c646')
+		{
+			if(LOGO_CUSTOMIZED)
+				document.getElementById('logo').src = "img/" + system + "_logo.png";
+			else
+				document.getElementById('logo').src = "img/logo2.png";
+		}
+		else
+		{
+			document.getElementById('logo').src = "img/logo.png";
+		}
+
+		if(syscolor)
+		{
+			var btnNodes = document.querySelectorAll('.btn-primary');
+			if(btnNodes)
+			{
+				for(var i=0; i < btnNodes.length; i++)
+				{
+					if(btnNodes[i])
+					{
+						btnNodes[i].style.backgroundColor = syscolor;
+						btnNodes[i].style.borderColor = syscolor;
+					}
+				}
+			}
+		}
+		
+		window.localStorage.setItem("paysuccess","NO");
+		loading.style.height = window.innerHeight;
+		scan_image.width = window.innerWidth*0.6;
+		
+		var content_body = document.getElementById("content_body");
+		var footingHeight = document.getElementById("footing").offsetHeight;
+		content_body.style.height=(window.innerHeight - footingHeight - content_body.getBoundingClientRect().top)+"px";
+		
+		checkOpenId ();
+		$.post(my_ip_address + "/weixin/get_token", {'myurl' :location.href.split('#')[0],'appid':my_appid}, function(data) {
+			data=eval("("+data+")");
+			wx.config({
+				  debug: false,
+			      appId: my_appid,
+			      timestamp: data.timestamp,
+			      nonceStr: data.noncestr,
+			      signature: data.signature,
+			      jsApiList: [
+			      	'closeWindow',
+			        'scanQRCode',
+			        'chooseWXPay'
+			      ]
+			});
+		});
+		
+		scan_coupon_btn.setAttribute("disabled", "true");//屏蔽按钮
+		
+	}
+	
+	function showLoading()
+	{
+		loading.hidden = false;
+		container.hidden = true;
+	}
+	function finishLoading()
+	{
+		loading.hidden = true;
+		container.hidden = false;
+	}
+	
+	function checkOpenId ()
+	{
+//		window.localStorage.setItem("openId", "oPOuMwpjAVX4WTWoWKv0ShcDWWP8");
+		var openId = window.localStorage.getItem(my_appid+"openId");
+		var nickname = window.localStorage.getItem("nickname");
+		if (!openId)
+		{
+			var wechatCode = GetQueryString('code');
+			$.post(my_ip_address + "/wechat/getOpenId", {'code':wechatCode,'appid':my_appid}, function(data)  {
+				data=eval("("+data+")");
+				if(data.openId){
+					window.localStorage.setItem(my_appid+"openId", data.openId);
+				}
+				if(data.nickname){
+					window.localStorage.setItem("nickname", data.nickname);
+				}
+			});
+			
+			/*
+			 $.ajax({
+				type: "GET",
+				cache: false,
+				url: my_ip_address + "/wechat/getOpenId",
+				data: {'code':wechatCode,'appid':my_appid},
+				dataType: "jsonp",
+				//jsonp: "callback",
+				jsonpCallback: "OnGetMemberSuccessByjsonp"
+			});
+			
+			function OnGetMemberSuccessByjsonp(data) {
+				data=eval("("+data+")");
+				window.localStorage.setItem(my_appid+"openId", data.openId);
+				window.localStorage.setItem("nickname", data.nickname);
+				openId = window.localStorage.getItem(my_appid+"openId");
+			};
+			*/
+		}
+	}
+	
+	function updateTicket(myTicket)
+	{
+		showLoading();
+		var openId = window.localStorage.getItem(my_appid+"openId");
+		if (!openId || openId == null || openId.length <= 0)
+			checkOpenId();
+		$.post(my_ip_address+"/user/update_ticket", {'ticket' : myTicket,'appid':my_appid, 'openId': openId}, function(data)
+			{
+				ok_button.removeAttribute("disabled");//启用按钮
+				data = eval("("+data+")");
+				if (data.code == RESULT_ERROR)
+				{
+					ticket_input.value  	= '';
+					alert(data.msg);
+				}
+				else if (data.code == RESULT_SUCCESS)
+				{
+					if (data.Price <= 0)
+					{
+						window.location.href = "ParkingPaySuccess.html?get_Seq="+data.Seq+"&getbill=False"+"&ticket="+data.Ticket+"&nr="+data.PaymentNr;
+					}
+					else 
+					{
+						 var url = 'ParkingCharge.html?Seq=' + data.Seq +
+                            '&Price=' + data.Price +
+                            '&Ticket=' + data.Ticket +
+                            '&Time=' + data.Time +
+                            '&Entry=' + data.Entry +
+                            '&PaymentNr=' + data.PaymentNr +
+                            '&Discount=' + data.Discount +
+                            '&QuitTime=' + data.QuitTime;
+//                             +'&ParkName=' + escapeStr(data.ParkName);
+						window.localStorage.setItem('sendParkName',data.ParkName);
+						window.localStorage.setItem('sendNote',data.note);
+                    window.location.href = url;
+					}
+				}
+				
+				finishLoading();
+			});
+	}
+	
+	function updateData (myData)
+	{
+		showLoading();
+		var openId = window.localStorage.getItem(my_appid+"openId");
+		$.post(my_ip_address+"/user/update_decrypt_ticket", {'myTicketData' : myData,'appid':my_appid, 'openId': openId}, function(data)
+			{
+				ok_button.removeAttribute("disabled");//启用按钮
+				data = eval("("+data+")");
+				if (data.code == RESULT_ERROR)
+				{
+					ticket_input.value  	= '';
+					alert(data.msg);
+				}
+				else if (data.code == RESULT_SUCCESS)
+				{
+					if (data.Price <= 0)
+					{
+						window.location.href = "ParkingPaySuccess.html?get_Seq="+data.Seq+"&getbill=False"+"&ticket="+data.Ticket+"&nr="+data.PaymentNr;
+					}
+					else 
+					{
+						var url = 'ParkingCharge.html?Seq=' + data.Seq + 
+							  '&Price=' + data.Price + 
+							  '&Ticket=' + data.Ticket  + 
+							  '&Time=' + data.Time + 
+							  '&Entry=' + data.Entry + 
+							  '&PaymentNr=' + data.PaymentNr + 
+							  '&Discount=' + data.Discount +
+							  '&QuitTime=' + data.QuitTime ;
+//							  +'&ParkName=' + escapeStr(data.ParkName);
+						window.localStorage.setItem('sendParkName',data.ParkName);
+						window.localStorage.setItem('sendNote',data.note);
+						window.location.href = url;
+					}
+				}
+				
+				finishLoading();
+			});
+	}
+	
+	ok_button.onclick = function ()
+	{
+		var code = ticket_input.value;
+		try
+		{
+			if (code != null && code.length >= 10)
+			{
+				var parkId = window.localStorage.getItem("system");
+				var strict = window.localStorage.getItem("strict");
+				if(strict == 1){
+					if(parkId != code.substring(code.length - 4)){
+						alert("该公众号不能扫描该纸票");
+						return;
+					}
+				}
+								
+				ok_button.setAttribute("disabled", "true");//屏蔽按钮
+				updateTicket (code);
+	//			$.post(my_ip_address+"/user/update_ticket", {'ticket' : code}, function(data) 
+	//			{
+	//				ok_button.removeAttribute("disabled");//启用按钮
+	//				data = eval("("+data+")");
+	//				if (data.code == RESULT_ERROR)
+	//				{
+	//					ticket_input.value  	= '';
+	//					alert(data.msg);
+	//				}
+	//				else if (data.code == RESULT_SUCCESS)
+	//				{
+	//					var url = 'ParkingCharge.html?Seq=' + data.Seq + 
+	//							  '&Price=' + data.Price + 
+	//							  '&Ticket=' + data.Ticket  + 
+	//							  '&Time=' + data.Time + 
+	//							  '&Entry=' + data.Entry + 
+	//							  '&PaymentNr=' + data.PaymentNr + 
+	//							  '&Discount=' + data.Discount +
+	//							  '&QuitTime=' + data.QuitTime;
+	//					window.location.href = url;
+	//				}
+	//			});
+			}
+			else 
+			{
+				alert("您的票号有误，请查询后再试或者重新扫描");
+			}
+		}catch(e){
+			alert("您的票号有误，请查询后再试或者重新扫描");
+		}
+	};
+	
+	
+	wx.error(function (res) 
+	{
+		alert(res.errMsg);
+	});
+		
+	wx.ready(function()
+	{
+		scan_coupon_btn.removeAttribute("disabled");//启用按钮
+		scan_coupon_btn.onclick = function()
+		{
+			wx.scanQRCode({
+				needResult: 1,
+				desc: 'scanQRCode desc',
+				success: function (res) 
+				{
+			      	mydata = eval("("+JSON.stringify(res)+")");
+			      	try
+			      	{
+			      		if (mydata.resultStr.indexOf("id=") >= 0)
+			      		{
+			      			var data = mydata.resultStr.split("id=");
+			      			myId = data[data.length -1];
+			      			updateData(myId);
+			      		}
+			      		else 
+			      		{
+			      			var resultArray = mydata.resultStr.split(",");
+							var resultTicket = resultArray[resultArray.length -1];
+							var resultParkId = resultTicket.substring(resultTicket.length - 3)
+							var parkId = window.localStorage.getItem("system");
+							var strict = window.localStorage.getItem("strict");
+							if(strict == 1){
+								if(!resultTicket || resultTicket.length != 10){
+									alert("扫描二维码失败，请重试或者手工输入");
+									return;
+								}
+								if(parkId != '0' + resultParkId){
+									alert("该公众号不能扫描该纸票");
+									return;
+								}
+							}
+					        updateTicket (resultTicket);
+			      		}
+
+			      	}catch(e){
+			      		//TODO handle the exception
+			      		ticket_input.value = '';
+			      		finishLoading();
+			      		alert("扫描二维码失败，请重试或者手工输入");
+			      	}
+		      	}
+			});
+		}
+	});
+</script>

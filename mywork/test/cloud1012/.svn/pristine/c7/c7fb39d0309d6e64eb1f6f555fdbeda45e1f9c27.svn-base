@@ -1,0 +1,29 @@
+{% macro render_field_with_errors(field) %}
+
+    <div class="form-group">
+        {{ field(class_='form-control', **kwargs)|safe }}
+        {% if field.errors %}
+            <ul class="error_message">
+                {% for error in field.errors %}
+                    <h5>
+                        <ul class="label label-danger">{{ error }}</ul>
+                    </h5>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{% macro render_field(field) %}
+    <p>{{ field(class_='form-control', **kwargs)|safe }}</p>
+{% endmacro %}
+
+{% macro render_checkbox_field(field) -%}
+    <div class="form-group">
+        <div class="checkbox">
+            <label>
+                {{ field(type='checkbox', **kwargs) }} 记住我
+            </label>
+        </div>
+    </div>
+{%- endmacro %}

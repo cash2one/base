@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+		<title>手机验证</title>
+		<script src="js/jquery.min.js"></script> 
+		<script src="bootstrap/dist/js/bootstrap.min.js"></script>
+		<link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link type="text/css" href="css/ParkingCSS.css" rel="stylesheet" />
+		<script src="js/config.js"></script>
+		<script src="js/MyJSTools.js"></script>
+	</head>
+	<body class="html_body">
+		<div id="container" >
+			<div id="content_body" >
+				<div style="margin:0 auto;">
+					<div style="margin:0 auto;text-align:center">
+						<p style="font-size: 15px;" style="margin-bottom: 0px;">为了更好的为您服务，请验证手机：</p>
+					</div>
+					<input id = "phone_input" type="text" class="form-control " placeholder="手机号码" aria-describedby="basic-addon2" style="width: 100%;font-size: 18px;height: 45px;">
+					<div class="input-group input-group-lg" style="margin-top: 10px;margin-bottom: 10px;">
+					  <input id = "varify_input" type="text" class="form-control" placeholder="验证码" aria-describedby="basic-addon2" >
+					  <span class="input-group-btn"> <button id="get_varify_code" class="btn btn-primary" type="button" >获取验证码</button> </span>
+					</div>
+					<p style="font-size: 15px;">点击-确定，即表示您同意<a href="ParkingProtocol.html" style="color: #085394;">《服务协议》</a></p>
+				</div>
+				<div style="margin:0 auto;text-align:center">
+					<button id = "submit_btn" type="button" class="btn btn-primary btn-lg" style="font-size: 18px;padding-bottom: 10px; padding-top: 10px; width: 100%;">确定</button>
+				</div>
+			</div>
+			<div id="footing" style="text-align:center;">
+				 Powered by: <img id="logo" src="img/logo.png" width="30" height="12" /> Copyright ©2016
+			</div>
+		</div>
+		
+	</body>
+</html>
+
+
+<script type="text/javascript">
+	var InterValObj; //timer变量，控制时间
+	var count = 60; //间隔函数，1秒执行
+	var curCount = 0;//当前剩余秒数
+	
+	var btn_get_varify_code = document.getElementById('get_varify_code');//获取验证码按钮
+	var btn_submit = document.getElementById("submit_btn");//确定提交按钮
+	
+	var input_phone 	= document.getElementById("phone_input");//手机号码输入框
+	var input_verify = document.getElementById("varify_input");//验证码输入框
+ 	
+ 	
+ 	init ();
+ 	function init ()
+ 	{
+ 		
+//  		var title = window.localStorage.getItem("title");
+//		if (title != null && title.length >0)
+//		{
+//			document.title = title;
+//		}
+		
+		// 替换按钮颜色和LOGO图标
+		var syscolor = window.localStorage.getItem('syscolor');
+		if(syscolor)
+		{
+			var btnNodes = document.querySelectorAll('.btn-primary');
+			if(btnNodes)
+			{
+				for(var i=0; i < btnNodes.length; i++)
+				{
+					if(btnNodes[i])
+					{
+						btnNodes[i].style.backgroundColor = syscolor;
+						btnNodes[i].style.borderColor = syscolor;
+					}
+				}
+			}
+		}
+		
+		if(syscolor == '#50c646')
+		{
+			if(LOGO_CUSTOMIZED)
+				document.getElementById('logo').src = "img/" + system + "_logo.png";
+			else
+				document.getElementById('logo').src = "img/logo2.png";
+		}
+		
+		
+   		var content_body = document.getElementById("content_body");
+   		var footingHeight = document.getElementById("footing").offsetHeight;
+   		content_body.style.height=(window.innerHeight - footingHeight - content_body.getBoundingClientRect().top)+"px";
+  
+ 		
+ 		btn_get_varify_code.setAttribute("disabled", "true");//初始化的时候先屏蔽按钮
+ 		immediately ();//监听输入框
+ 		checkOpenId ();
+ 		
+ 	}
+ 	
+ 	//添加监听手机号码输入框
+ 	function immediately()
+ 	{
+	  if("\v"=="v") {
+		input_phone.onpropertychange = webChange;
+	  }
+	  else
+	  {
+		input_phone.addEventListener("input",webChange,false);
+	  }
+
+	};
+	function webChange()
+	{
+		var phone = input_phone.value;
+		if (isMobilePhone (phone))
+		{
+			if (curCount <= 0)
+			{
+				btn_get_varify_code.removeAttribute("disabled");//启用按钮
+			}
+			
+		}
+		else 
+		{
+			btn_get_varify_code.setAttribute("disabled", "true");
+		}
+	};
+ 	
+ 	//提交手机号码和验证码
+ 	btn_submit.onclick = function ()
+ 	{
+ 		var phone = input_phone.value;
+ 		var verify = input_verify.value;
+ 		if (isMobilePhone (phone) && verify.length >= 4)
+ 		{
+ 			var openId = window.localStorage.getItem(my_appid+"openId");
+			$.post(my_ip_address +"/user/verify_login", {'phone':phone,'verify':verify,'openId':openId}, function(data) 
+			{
+				data=eval("("+data+")");
+				if (data.code == RESULT_SUCCESS)
+				{
+					window.location.href = "ParkingLoginSuccess.html";
+					window.localStorage.setItem("loginSuccess", "true");
+				}
+				else 
+				{
+					alert(data.msg);
+				}
+			});
+ 		}
+ 		else 
+ 		{
+ 			alert("验证码或者手机号码有误，请重新输入");
+ 		}
+ 	};
+ 	//处理获取验证码按钮
+	btn_get_varify_code.onclick = function ()
+	{
+		
+　　		//设置button效果，开始计时
+		btn_get_varify_code.setAttribute("disabled", "true");
+		
+    		var openId = window.localStorage.getItem(my_appid+"openId");
+		var nickname = window.localStorage.getItem("nickname");
+     	var phone = input_phone.value;
+     	
+		$.post(my_ip_address + "/user/get_verify_code", {'phone':phone, 'openId':openId, 'nickname':nickname}, function(data)  
+		{
+			data=eval("("+data+")");
+			if (data.code == RESULT_SUCCESS)
+			{//请求成功
+				curCount = count;
+				btn_get_varify_code.innerText = curCount + "秒后重试";
+     			InterValObj = window.setInterval(SetRemainTime, 1000); //启动计时器，1秒执行一次
+			}
+			else 
+			{//请求失败
+				curCount = 0;
+				window.clearInterval(InterValObj);//停止计时器
+				btn_get_varify_code.removeAttribute("disabled");//启用按钮
+				btn_get_varify_code.innerText = "重新发送验证码";
+				alert('获取验证码失败，请重试！')
+			}
+		});
+
+	};
+	
+	//timer处理函数
+	function SetRemainTime() 
+	{
+		if (curCount == 0) 
+		{
+			window.clearInterval(InterValObj);//停止计时器
+			btn_get_varify_code.removeAttribute("disabled");//启用按钮
+			btn_get_varify_code.innerText = "重新发送验证码";
+		}
+		else 
+		{
+			curCount--;
+			btn_get_varify_code.innerText = curCount + "秒后重试";
+		}
+	};
+	
+	function checkOpenId ()
+	{
+		var openId = window.localStorage.getItem(my_appid+"openId");
+		var nickname = window.localStorage.getItem("nickname");
+		if (openId == null || openId.length <= 0)
+		{
+			var wechatCode = GetQueryString('code');
+			$.post(my_ip_address + "/wechat/getOpenId", {'code':wechatCode,'appid':my_appid}, function(data)
+			{
+				data=eval("("+data+")");
+				if(data.openId){
+					window.localStorage.setItem(my_appid+"openId", data.openId);
+				}
+				window.localStorage.setItem("nickname", data.nickname);
+				openId = window.localStorage.getItem(my_appid+"openId");
+			});
+		}
+	}
+	
+	
+	
+	
+</script>

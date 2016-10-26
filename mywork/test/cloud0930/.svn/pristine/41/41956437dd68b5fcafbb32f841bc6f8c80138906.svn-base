@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+		<title>卡券使用规则</title>
+		<link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link type="text/css" href="css/ParkingCSS.css" rel="stylesheet" />
+	</head>
+	<body class="html_body">
+		<div id="container" >
+			<div id="content_body" >
+				<h3 style="margin: 15px;">卡券使用规则：</h3>
+				<p style="margin: 15px;">1.卡券仅限抵扣相应额度的停车费用，其他费用由客户自理；</p>
+				<p style="margin: 15px;">2.此卡券不兑现金、不开发票、不设找零，且不可与其它优惠同时使用；</p>
+				<p style="margin: 15px;">3.每单只能使用一张，且每张卡券仅能使用一次；</p>
+				<p style="margin: 15px;">4.卡券应在券面表明的有效期内使用，逾期作废；</p>
+				<p style="margin: 15px;">5.卡券仅限指定停车场使用；</p>
+				<p style="margin: 15px;">6.本平台保留最终解释权；</p>
+			</div>
+			<div id="footing" style="text-align:center;">
+				 Powered by: <img id="logo" src="img/logo.png" width="30" height="12" /> Copyright ©2016
+			</div>
+		</div>
+	</body>
+</html>
+
+<script type="text/javascript">
+	init ();
+   	function init ()
+   	{
+// 		var title = window.localStorage.getItem("title");
+//		if (title != null && title.length >0)
+//		{
+//			document.title = title;
+//		}
+		
+		// 替换按钮颜色和LOGO图标
+		var syscolor = window.localStorage.getItem('syscolor');
+		if(syscolor)
+		{
+			var btnNodes = document.querySelectorAll('.btn-primary');
+			if(btnNodes)
+			{
+				for(var i=0; i < btnNodes.length; i++)
+				{
+					if(btnNodes[i])
+					{
+						btnNodes[i].style.backgroundColor = syscolor;
+						btnNodes[i].style.borderColor = syscolor;
+					}
+				}
+			}
+		}
+		
+		if(syscolor == '#50c646')
+		{
+			if(LOGO_CUSTOMIZED)
+				document.getElementById('logo').src = "img/" + system + "_logo.png";
+			else
+				document.getElementById('logo').src = "img/logo2.png";
+		}
+		
+   		var content_body = document.getElementById("content_body");
+   		var footingHeight = document.getElementById("footing").offsetHeight;
+   		content_body.style.height=(window.innerHeight - footingHeight - content_body.getBoundingClientRect().top)+"px";
+   	}
+</script>

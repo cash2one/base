@@ -1,0 +1,2347 @@
+import csv
+import random
+import time
+from datetime import date
+
+import flask_admin as admin
+import flask_login as login
+from flask import url_for, render_template, redirect, flash, Response, stream_with_context, request
+from flask.ext.admin.contrib.mongoengine import ModelView
+from flask.ext.security import utils, current_user, url_for_security, MongoEngineUserDatastore, login_required
+from flask_admin import expose
+from flask_admin._compat import (iteritems, csv_encode)
+from flask_admin.babel import gettext
+from flask_admin.helpers import (get_redirect_target)
+from flask_admin.model import typefmt
+from jinja2 import Markup
+from werkzeug.utils import secure_filename
+from wtforms import validators
+from wtforms.fields import PasswordField, SelectField, SelectMultipleField, StringField
+from wtforms.validators import DataRequired, ValidationError, Regexp
+from config.default import Config
+import app.stub as stub
+from .models import *
+from .CryptManager import *
+from .logger import *
+
+user_datastore = MongoEngineUserDatastore(db, ParkAdmin, Role)
+
+
+def date_format(view, value):
+    return value.strftime('%Y.%m.%d %H:%M:%S')
+
+
+MY_DEFAULT_FORMATTERS = dict(typefmt.BASE_FORMATTERS)
+MY_DEFAULT_FORMATTERS.update({
+    date: date_format
+})
+MY_DEFAULT_FORMATTERS_EXPORT = dict(typefmt.EXPORT_FORMATTERS)
+MY_DEFAULT_FORMATTERS_EXPORT.update({
+    date: date_format
+})
+
+
+# 将秒转换成时分秒格式
+def format_seconds_to_hhmmss(seconds):
+    if seconds != None:
+        hours = seconds // (60 * 60)
+        seconds %= (60 * 60)
+        minutes = seconds // 60
+        seconds %= 60
+        return "%i:%02i:%02i" % (hours, minutes, seconds)
+    return "%i:%02i:%02i" % (0, 0, 0)
+
+
+def is_accessible(roles_accepted=None, user=None):
+    if user.has_role('SuperAdmin'):
+        return True
+    if roles_accepted == ['ALL']:
+        return True
+    if roles_accepted:
+        accessible = any(
+                [user.has_role(role) for role in roles_accepted]
+        )
+        return accessible
+    return False
+
+
+class CustomView(ModelView):
+    list_template = 'sb-admin/pages/list.html'
+    create_template = 'sb-admin/pages/create.html'
+    edit_template = 'sb-admin/pages/edit.html'
+
+    details_modal = True
+    details_modal_template = 'sb-admin/pages/modals/details.html'
+
+    edit_modal = True
+    edit_modal_template = 'sb-admin/pages/modals/edit.html'
+
+    create_modal = True
+    create_modal_template = 'sb-admin/pages/modals/create.html'
+
+    column_type_formatters = MY_DEFAULT_FORMATTERS
+    column_type_formatters_export = MY_DEFAULT_FORMATTERS_EXPORT
+
+    def __init__(self, *args, **kwargs):
+        self.roles_accepted = kwargs.pop('roles_accepted', list())
+        super(CustomView, self).__init__(*args, **kwargs)
+
+    def is_accessible(self):
+        roles_accepted = getattr(self, 'roles_accepted', None)
+        accessible = is_accessible(roles_accepted=roles_accepted, user=current_user)
+
+        if current_user.has_role('SuperAdmin'):
+            self.can_delete = True
+        else:
+            self.can_delete = False
+
+        return accessible
+
+    def _handle_view(self, name, *args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for_security('login', next="/admin"))
+        if not self.is_accessible():
+            # return self.render("admin/denied.html")
+            return "<p>Access denied</p>"
+
+    def _list_thumbnail(self, view, context, model, name):
+        if not model.logo.thumbnail:
+            return ''
+
+        return Markup('<img src="/img/%s">' % str(model.logo.thumbnail._id))
+
+
+############################管理界面######################################
+
+
+# 管理员管理界面的定义
+class ModelView_ParkAdmin(CustomView):
+    can_delete = True
+
+    def __init__(self, session, **kwargs):
+        self.model_not_can_edit = False;
+        self.column_default_sort = ("create_time", True)
+        self.column_exclude_list = ('password', 'confirmed_at', 'active')
+        self.column_labels = dict(username='用户名',
+                                  company='物业公司',
+                                  park='停车场',
+                                  telephone='联系电话',
+                                  roles='管理员等级',
+                                  email='电子邮箱',
+                                  create_time='创建时间',
+                                  active='状态'
+                                  )
+
+        self.form_columns = (
+            'username', 'password2', 'password_new',
+            'rolelist', 'email', 'company', 'park', 'park_select', 'telephone', 'roles', 'create_time')
+
+        password2 = PasswordField('密码', [validators.DataRequired()])
+        password_new = PasswordField('新密码')
+        park_select = SelectField('停车场')
+        rolelist = SelectField('管理员等级',
+                               validators=[validators.DataRequired()],
+                               choices=[(None, '---'),
+                                        ('0', '超级管理员'),
+                                        ('1', '物业管理员'),
+                                        ('2', '停车场管理员'),
+                                        ('3', '停车场操作员'),
+                                        ('4', '停车场财务员'),
+                                        ('5', '停车场商家')
+                                        ]
+                               )
+
+        self.form_extra_fields = {
+            'password2': password2,
+            'password_new': password_new,
+            'rolelist': rolelist,
+            'park_select': park_select
+        }
+
+        self.reset_cache()
+        super(ModelView_ParkAdmin, self).__init__(ParkAdmin, session, **kwargs)
+
+    def saveUserOrder(self, Ticket, park_id):
+
+        mUserOrder = UserOrder(ticket=Ticket,
+                               park_id=park_id)
+        mUserOrder.save()
+
+    # 重设属性
+    def reset_cache(self):
+        self.form_args = dict(
+                username=dict(label='用户名', validators=[DataRequired(), self.validate_unique]),
+                password2=dict(label='密码', validators=[DataRequired()]),
+                company=dict(label='物业公司'),
+                park=dict(label='停车场'),
+                telephone=dict(label='联系电话'),
+                create_time=dict(label='创建时间'),
+                roles=dict(label='管理员等级', validators=[DataRequired()]),
+                email=dict(label='电子邮箱')
+        )
+
+    # 检查唯一性
+    def validate_unique(self, form, field):
+        if ParkAdmin.objects(username=field.data):
+            raise ValidationError('用户名重复')
+
+    # 界面创建后回调
+    def _handle_view(self, name, *args, **kwargs):
+        # 根据管理员等级显示不同的界面
+        user = current_user
+        if user.has_role('SuperAdmin'):
+            self.form_create_rules = (
+                'username', 'company', 'park_select', 'password2', 'telephone', 'email', 'rolelist')
+        elif user.has_role('PropertyAdmin'):
+            self.form_create_rules = ('username', 'park_select', 'password2', 'telephone', 'email', 'rolelist')
+        elif user.has_role('ParkAdmin'):
+            self.form_create_rules = ('username', 'password2', 'telephone', 'email', 'rolelist')
+
+        self.form_edit_rules = (
+            'telephone', 'email', 'password_new')
+        # 刷新cache属性
+        super(ModelView_ParkAdmin, self)._refresh_cache()
+        super(ModelView_ParkAdmin, self)._handle_view(name, *args, **kwargs)
+
+    # 选择修改按键时调用(目前只发现这个时候调用,可能还有其他情况)
+    def get_one(self, id):
+        # 根据不同等级的管理者登入后,对其下不同等级的管理员修改界面的定义
+        model_user = self.model.objects(id=id).first()
+        subuser = user_datastore.find_user(username=model_user.username)
+        # 超级管理员
+        if current_user.has_role('SuperAdmin'):
+            if subuser.has_role('SuperAdmin'):
+                self.form_edit_rules = (
+                    'telephone', 'email', 'password_new')
+            elif subuser.has_role('PropertyAdmin'):
+                self.form_edit_rules = (
+                    'telephone', 'email', 'password_new')
+            elif subuser.has_role('ParkAdmin'):
+                self.form_edit_rules = (
+                    'telephone', 'email', 'password_new')
+            elif subuser.has_role('ParkSeller'):
+                self.form_edit_rules = (
+                    'telephone', 'email', 'password_new')
+            elif subuser.has_role('ParkOperator') or subuser.has_role('ParkAccountant'):
+                self.form_edit_rules = (
+                    'telephone', 'email', 'password_new')
+        # 物业管理员
+        if current_user.has_role('PropertyAdmin'):
+            if subuser.has_role('PropertyAdmin') and current_user != subuser:
+                self.model_not_can_edit = True
+            self.form_edit_rules = (
+                'telephone', 'email', 'password_new')
+        if current_user.has_role('ParkAdmin'):
+            if subuser.has_role('ParkAdmin') and current_user != subuser:
+                self.model_not_can_edit = True
+            self.form_edit_rules = (
+                'telephone', 'email', 'password_new')
+        super(ModelView_ParkAdmin, self)._refresh_cache()
+        return super(ModelView_ParkAdmin, self).get_one(id)
+
+    def scaffold_form(self):
+        form_class = super(ModelView_ParkAdmin, self).scaffold_form()
+        # 根据不同等级管理员,显示不同的管理员等级下来菜单
+        if current_user:
+            if current_user.has_role('SuperAdmin'):
+                form_class.rolelist = SelectField('管理员等级',
+                                                  validators=[validators.DataRequired()],
+                                                  choices=[(None, '---'),
+                                                           ('0', '超级管理员'),
+                                                           ('1', '物业管理员'),
+                                                           ('2', '停车场管理员'),
+                                                           ('3', '停车场操作员'),
+                                                           ('4', '停车场财务员'),
+                                                           ('5', '停车场商家')
+                                                           ]
+                                                  )
+                parks = ParkManagement.objects
+                park_opetions = []
+                park_opetions.append(['default', '---'])
+                for park in parks:
+                    park_opetion = [park.park_id, park.park_id + ':' + park.park_name]
+                    park_opetions.append(park_opetion)
+
+                form_class.park_select = SelectField('停车场',
+                                                     choices=park_opetions
+                                                     )
+            elif current_user.has_role('PropertyAdmin'):
+                form_class.rolelist = SelectField('管理员等级',
+                                                  validators=[validators.DataRequired()],
+                                                  choices=[
+                                                      (None, '---'),
+                                                      ('2', '停车场管理员'),
+                                                      ('3', '停车场操作员'),
+                                                      ('4', '停车场财务员'),
+                                                      ('5', '停车场商家')
+                                                  ]
+                                                  )
+                parks = ParkManagement.objects(company=current_user.company)
+                park_opetions = []
+                park_opetions.append([None, '---'])
+                for park in parks:
+                    park_opetion = [park.park_id, park.park_name]
+                    park_opetions.append(park_opetion)
+
+                form_class.park_select = SelectField('停车场',
+                                                     validators=[validators.DataRequired()],
+                                                     choices=park_opetions
+                                                     )
+            elif current_user.has_role('ParkAdmin'):
+                form_class.rolelist = SelectField('管理员等级',
+                                                  validators=[validators.DataRequired()],
+                                                  choices=[
+                                                      (None, '---'),
+                                                      ('3', '停车场操作员'),
+                                                      ('4', '停车场财务员'),
+                                                      ('5', '停车场商家')
+                                                  ]
+                                                  )
+
+        return form_class
+
+    # 提交表单时
+    def on_model_change(self, form, model, is_created):
+        if is_created == True:
+            if current_user.has_role('SuperAdmin'):
+                if form.rolelist.data == '0':
+                    model.park = None
+                    model.company = None
+                elif form.rolelist.data == '1':
+                    model.park = None
+                else:
+                    if form.park_select.data != 'default' and form.park_select.data != None:
+                        model.park = ParkManagement.objects(park_id=form.park_select.data).first()
+
+            if current_user.has_role('PropertyAdmin'):
+                if form.rolelist.data == '1':
+                    model.park = None
+
+                    model.company = current_user.company
+                else:
+                    if form.park_select.data != 'default' and form.park_select.data != None:
+                        model.park = ParkManagement.objects(park_id=form.park_select.data).first()
+                model.company = current_user.company
+            elif current_user.has_role('ParkAdmin'):
+                model.company = current_user.company
+                model.park = current_user.park
+
+            if len(form.password2.data):
+                p = form.password2.data.encode('utf-8')
+                model.password = utils.encrypt_password(p)
+        else:
+            if len(form.password_new.data):
+                p = form.password_new.data.encode('utf-8')
+                model.password = utils.encrypt_password(p)
+
+    # 重置user的role属性
+    def clean_role(self, user):
+        user_datastore.remove_role_from_user(user, 'PropertyAdmin')
+        user_datastore.remove_role_from_user(user, 'ParkAdmin')
+        user_datastore.remove_role_from_user(user, 'ParkOperator')
+        user_datastore.remove_role_from_user(user, 'ParkAccountant')
+        user_datastore.remove_role_from_user(user, 'ParkSeller')
+
+    # 提交表单后
+    def after_model_change(self, form, model, is_created):
+        # 权限写
+        if is_created:
+            user = user_datastore.find_user(username=model.username)
+            self.clean_role(user)
+            if form.rolelist.data == '0' and current_user.has_role('SuperAdmin'):
+                user_datastore.add_role_to_user(user, 'SuperAdmin')
+            elif form.rolelist.data == '1' and (current_user.has_role('SuperAdmin') or
+                                                    current_user.has_role('PropertyAdmin')):
+                user_datastore.add_role_to_user(user, 'PropertyAdmin')
+            elif form.rolelist.data == '2' and (
+                            current_user.has_role('SuperAdmin') or current_user.has_role('PropertyAdmin')
+                    or current_user.has_role('ParkAdmin')):
+                user_datastore.add_role_to_user(user, 'ParkAdmin')
+            elif form.rolelist.data == '3' and (
+                            current_user.has_role('SuperAdmin') or
+                            current_user.has_role('PropertyAdmin') or
+                        current_user.has_role('ParkAdmin')):
+                user_datastore.add_role_to_user(user, 'ParkOperator')
+            elif form.rolelist.data == '4' and (
+                            current_user.has_role('SuperAdmin') or
+                            current_user.has_role('PropertyAdmin') or
+                        current_user.has_role('ParkAdmin')):
+                user_datastore.add_role_to_user(user, 'ParkAccountant')
+            elif form.rolelist.data == '5' and (
+                current_user.has_role('SuperAdmin') or
+                current_user.has_role('PropertyAdmin') or
+                current_user.has_role('ParkAdmin')):
+                user_datastore.add_role_to_user(user, 'ParkSeller')
+
+        # 还原 form_args设置
+        self.reset_cache()
+        super(ModelView_ParkAdmin, self)._refresh_cache()
+
+    # 重写查询语句
+    def get_query(self):
+        if current_user.has_role('SuperAdmin'):
+            return self.model.objects
+
+        elif current_user.has_role('PropertyAdmin'):
+
+            return self.model.objects(company=current_user.company)
+
+        elif current_user.has_role('ParkAdmin'):
+
+            return self.model.objects(park=current_user.park, company=current_user.company)
+
+    # 刷新停车场的管理员名单
+    def update_ParkManagementModel_By_Admin(self, model):
+        admins = ParkAdmin.objects(park=model.park)
+        parkname = str(model.park)
+        parkid = parkname[0:4]
+        if admins:
+            admins_str = ''
+            for single_admin in admins:
+                admins_str += str(single_admin) + ' '
+        park = ParkManagement.objects(park_id=parkid).first()
+        if park:
+            park.update(admin=admins_str)
+
+    def can_do_edit(self, model):
+
+        if current_user.has_role(model.roles[0].name) == False:
+            return True
+        if current_user.has_role(model.roles[0].name) == True and model.username != current_user.username:
+            return False
+
+        return True
+
+        # Views
+
+    @expose('/')
+    def index_view(self):
+        """
+            List view
+        """
+        if self.can_delete:
+            delete_form = self.delete_form()
+        else:
+            delete_form = None
+
+        # Grab parameters from URL
+        view_args = self._get_list_extra_args()
+
+        # Map column index to column name
+        sort_column = self._get_column_by_idx(view_args.sort)
+        if sort_column is not None:
+            sort_column = sort_column[0]
+
+        # Get count and data
+        count, data = self.get_list(view_args.page, sort_column, view_args.sort_desc,
+                                    view_args.search, view_args.filters)
+
+        list_forms = {}
+        if self.column_editable_list:
+            for row in data:
+                list_forms[self.get_pk_value(row)] = self.list_form(obj=row)
+
+        # Calculate number of pages
+        if count is not None:
+            num_pages = count // self.page_size
+            if count % self.page_size != 0:
+                num_pages += 1
+        else:
+            num_pages = None
+
+        # Various URL generation helpers
+        def pager_url(p):
+            # Do not add page number if it is first page
+            if p == 0:
+                p = None
+
+            return self._get_list_url(view_args.clone(page=p))
+
+        def sort_url(column, invert=False):
+            desc = None
+
+            if invert and not view_args.sort_desc:
+                desc = 1
+
+            return self._get_list_url(view_args.clone(sort=column, sort_desc=desc))
+
+        # Actions
+        actions, actions_confirmation = self.get_actions_list()
+
+        clear_search_url = self._get_list_url(view_args.clone(page=0,
+                                                              sort=view_args.sort,
+                                                              sort_desc=view_args.sort_desc,
+                                                              search=None,
+                                                              filters=None))
+
+        return self.render(
+                'sb-admin/pages/adminList.html',
+                data=data,
+                list_forms=list_forms,
+                delete_form=delete_form,
+
+                # List
+                list_columns=self._list_columns,
+                sortable_columns=self._sortable_columns,
+                editable_columns=self.column_editable_list,
+
+                # Pagination
+                count=count,
+                pager_url=pager_url,
+                num_pages=num_pages,
+                page=view_args.page,
+                page_size=self.page_size,
+
+                # Sorting
+                sort_column=view_args.sort,
+                sort_desc=view_args.sort_desc,
+                sort_url=sort_url,
+
+                # Search
+                search_supported=self._search_supported,
+                clear_search_url=clear_search_url,
+                search=view_args.search,
+
+                # Filters
+                filters=self._filters,
+                filter_groups=self._get_filter_groups(),
+                active_filters=view_args.filters,
+
+                # Actions
+                actions=actions,
+                actions_confirmation=actions_confirmation,
+
+                # Misc
+                enumerate=enumerate,
+                get_pk_value=self.get_pk_value,
+                get_value=self.get_list_value,
+                return_url=self._get_list_url(view_args),
+                can_do_edit=self.can_do_edit
+        )
+
+
+# 物业公司管理界面的定义 具体的方法解释见'ModelView_PropertyCompany'
+class ModelView_PropertyCompany(CustomView):
+    can_view_details = True
+    column_filters = []
+
+    def __init__(self, session, **kwargs):
+        self.column_default_sort = ("create_time", True)
+        if Config.SUPPORT_THIRD_PART:
+            self.column_exclude_list = ( 'account_password', 'wechat_appid', 'wechat_secret', 'wechat_m_api_key',
+                'alipay_account', 'alipay_partner', 'alipay_md5_key', 'wechat_account')
+        else:
+            self.column_exclude_list = (
+                'account_password', 'wechat_appid', 'wechat_secret', 'wechat_mch_id', 'wechat_m_api_key',
+                'alipay_account', 'alipay_partner', 'alipay_md5_key')
+        self.column_labels = dict(company_name='公司名称',
+                                  address='地址',
+                                  post='邮编',
+                                  contact='联系人',
+                                  telephone='联系电话',
+                                  account='管理员账号',
+                                  wechat_account='微信支付账号',
+                                  deposit_bank='银行开户行',
+                                  bank_account='银行账号',
+                                  bank_account_name='银行账户名',
+                                  create_time='创建时间',
+                                  logo='公司Logo',
+                                  wechat_appid='微信app id',
+                                  wechat_secret='微信秘钥',
+                                  wechat_account_type='微信结账',
+                                  wechat_mch_id='子商户ID(实时结账必填)',
+                                  wechat_m_api_key='微信商户api密钥',
+                                  alipay_account='支付宝账号',
+                                  alipay_partner='支付宝合作伙伴id',
+                                  alipay_md5_key='支付宝md5秘钥'
+
+                                  )
+        wechat_account_select = SelectField('微信结账',
+                                    choices=[('0', '定期结账'),
+                                             ('1', '实时结账')],
+                                    validators=[DataRequired()]
+                                    )
+        self.form_extra_fields = {
+            'wechat_account_select': wechat_account_select
+        }
+        self.form_args = dict(
+                company_name=dict(label='公司名称', validators=[DataRequired(), self.validate_unique,
+                                                            Regexp(regex=r'[^ ]+$', message='字段中不能有空格')]),
+                logo=dict(label='公司Logo'),
+                address=dict(label='地址'),
+                post=dict(label='邮编'),
+                contact=dict(label='联系人'),
+                telephone=dict(label='联系电话'),
+                account=dict(label='管理员账号'),
+                wechat_account=dict(label='微信支付账号'),
+                deposit_bank=dict(label='银行开户行'),
+                bank_account=dict(label='银行账号'),
+                bank_account_name=dict(label='银行账户名'),
+                create_time=dict(label='创建时间'),
+                wechat_appid=dict(label='微信app id'),
+                wechat_secret=dict(label='微信秘钥'),
+                wechat_m_api_key=dict(label='微信商户api密钥'),
+                alipay_account=dict(label='支付宝账号'),
+                alipay_partner=dict(label='支付宝合作伙伴id'),
+                alipay_md5_key=dict(label='支付宝md5秘钥'),
+                wechat_account_type=dict(label='微信结账'),
+                wechat_mch_id=dict(label="子商户ID(实时结账必填)")
+        )
+
+        self.column_formatters = {
+            'logo': self._list_thumbnail
+        }
+
+        self.column_searchable_list = ('company_name', 'address', 'contact', 'telephone',
+                                       'wechat_account', 'deposit_bank',
+                                       'bank_account', 'bank_account_name', 'wechat_appid', 'wechat_secret',
+                                       'wechat_mch_id', 'wechat_m_api_key',
+                                       'alipay_account', 'alipay_partner', 'alipay_md5_key')
+        if Config.SUPPORT_THIRD_PART:
+            self.form_create_rules = ('company_name', 'logo', 'address', 'post', 'contact', 'telephone',
+                                      'wechat_account_select', 'wechat_mch_id', 'deposit_bank','bank_account',
+                                      'bank_account_name')
+
+            self.form_edit_rules = ('logo', 'address', 'post', 'contact', 'telephone'
+                                    ,'wechat_account_select', 'wechat_mch_id','deposit_bank', 'bank_account',
+                                    'bank_account_name')
+        else:
+            self.form_create_rules = ('company_name', 'logo', 'address', 'post', 'contact', 'telephone',
+                                      'wechat_account', 'deposit_bank',
+                                      'bank_account', 'bank_account_name')
+
+            self.form_edit_rules = ('logo', 'address', 'post', 'contact', 'telephone'
+                                    , 'wechat_account', 'deposit_bank',
+                                    'bank_account', 'bank_account_name')
+
+        self.column_details_exclude_list = ('wechat_appid', 'wechat_secret', 'wechat_m_api_key',
+                                            'alipay_account', 'alipay_partner', 'alipay_md5_key')
+        super(ModelView_PropertyCompany, self).__init__(PropertyCompany, session, **kwargs)
+
+    def validate_unique(self, form, field):
+        if PropertyCompany.objects(company_name=field.data):
+            raise ValidationError('公司名称已使用')
+
+    # 提交表单时
+    def on_model_change(self, form, model, is_created):
+        if form.wechat_account_select.data == '0':
+            model.wechat_account_type = form.wechat_account_select.data + ':定期结账'
+        elif form.wechat_account_select.data == '1':
+            model.wechat_account_type = form.wechat_account_select.data + ':实时结账'
+
+
+# 停车场管理界面定义,具体的方法解释见'ModelView_ParkManagement'
+class ModelView_ParkManagement(CustomView):
+    def __init__(self, session, **kwargs):
+        self.iscreate = True
+        self.column_exclude_list = ('admin')
+        self.column_default_sort = ("create_time", True)
+        self.column_labels = dict(park_id="停车场编号",
+                                  park_name="停车场名称",
+                                  address='停车场地址',
+                                  company='物业公司',
+                                  contact='联系人',
+                                  telephone='联系电话',
+                                  server='服务器地址',
+                                  admin='管理员',
+                                  create_time='创建时间',
+                                  invoice_code='发票口令',
+                                  wechat_goods_tags='微信活动标签',
+                                  quit_time_limit='离场限时(分钟)',
+                                  logo='停车场logo',
+                                  note="提示"
+                                  )
+
+        self.form_args = dict(
+                park_id=dict(label='停车场编号', validators=[DataRequired(), self.validate_unique,
+                                                        Regexp(regex=r'^\d{3,4}$', message='请输入3或4位数字停车场编号')
+                                                        ]),
+                park_name=dict(label='停车场名称', validators=[DataRequired(), self.validate_unique2,
+                                                          Regexp(regex=r'[^ ]+$', message='字段中不能有空格')]),
+                address=dict(label='停车场地址'),
+                contact=dict(label='联系人', validators=[DataRequired()]),
+                telephone=dict(label='联系电话', validators=[DataRequired(), Regexp(regex=r'^\d{11}$',
+                                                                                message='请输入正确的手机号码')]),
+                server=dict(label='服务器地址', validators=[DataRequired()]),
+                invoice_code=dict(label='发票口令',
+                                  validators=[DataRequired(), Regexp(regex=r'^\d{4}$', message='请输入4位数字发票口令')]),
+                admin=dict(label='管理员'),
+                wechat_goods_tags=dict(label='微信活动标签', validators=[DataRequired()]),
+                company=dict(label='物业公司'),
+                note=dict(label='提示'),
+                quit_time_limit=dict(label='离场限时(分钟)', validators=[DataRequired(), Regexp(regex=r'^(0|[1-9][0-9]*)$',
+                                                                                          message='请输入首位不能是0的数字')]),
+        )
+        self.column_formatters = {
+            'logo': self._list_thumbnail
+        }
+
+        self.column_searchable_list = ('park_id', 'park_name', 'address', 'contact', 'telephone', 'server')
+        self.form_create_rules = (
+            'park_id', 'park_name', 'logo', 'server', 'invoice_code', 'address', 'contact', 'telephone',
+            'quit_time_limit', 'note')
+        self.form_edit_rules = (
+            'park_name', 'logo', 'server', 'invoice_code', 'address', 'contact', 'telephone',
+            'quit_time_limit', 'note')
+        super(ModelView_ParkManagement, self).__init__(ParkManagement, session, **kwargs)
+
+    def validate_unique(self, form, field):
+        if ParkManagement.objects(park_id=field.data):
+            raise ValidationError('停车场编号已使用')
+
+    def validate_unique2(self, form, field):
+        if self.iscreate==False:
+            return
+        
+        if ParkManagement.objects(park_name=field.data):
+            raise ValidationError('停车场名称已使用')
+
+    def _handle_view(self, name, *args, **kwargs):
+        # 根据管理员等级显示不同的界面
+        user = current_user
+        if user.has_role('SuperAdmin'):
+            self.form_create_rules = (
+                'park_id', 'company', 'park_name', 'logo', 'server', 'invoice_code', 'wechat_goods_tags',
+                'address', 'contact', 'telephone', 'quit_time_limit', 'note')
+            self.form_edit_rules = (
+                'park_name', 'logo', 'server', 'invoice_code', 'wechat_goods_tags', 'address',
+                'contact', 'telephone', 'quit_time_limit', 'note')
+            self.can_edit = True
+
+            self.can_create = True
+            self.can_view_details = True
+        elif user.has_role('PropertyAdmin'):
+            self.form_create_rules = (
+                'park_id', 'park_name', 'logo', 'server', 'invoice_code', 'address', 'contact', 'telephone',
+                'quit_time_limit', 'note')
+            self.can_edit = True
+
+            self.can_create = True
+            self.can_view_details = True
+        elif user.has_role('ParkAdmin'):
+            self.form_create_rules = (
+                'park_id', 'park_name', 'logo', 'server', 'invoice_code', 'address', 'contact', 'telephone',
+                'quit_time_limit', 'note')
+            self.can_edit = False
+
+            self.can_create = False
+            self.can_view_details = True
+        # 刷新form_rules属性
+        super(ModelView_ParkManagement, self)._refresh_cache()
+        super(ModelView_ParkManagement, self)._handle_view(name, *args, **kwargs)
+
+    def get_one(self, id):
+        self.form_edit_rules = (
+            'park_name', 'logo', 'address', 'invoice_code', 'contact', 'telephone', 'server', 'quit_time_limit', 'note'
+        )
+
+        return super(ModelView_ParkManagement, self).get_one(id)
+
+    def get_query(self):
+        if current_user.has_role('SuperAdmin'):
+            return self.model.objects
+
+        elif current_user.has_role('PropertyAdmin'):
+            return self.model.objects(company=current_user.company)
+
+        elif current_user.has_role('ParkAdmin'):
+
+            park_id_name = str(current_user.park)
+            parkid = park_id_name[0:4]
+            return self.model.objects(park_id=parkid, company=current_user.company)
+
+    def on_model_change(self, form, model, is_created):
+        if current_user.has_role('PropertyAdmin'):
+            model.company = current_user.company
+
+
+    def create_form(self, obj=None):
+        self.iscreate=True
+        logging.debug("create_form")
+        return super(ModelView_ParkManagement, self).create_form(obj)
+
+    def edit_form(self, obj=None):
+        self.iscreate=False
+        logging.debug("edit_form")
+        return super(ModelView_ParkManagement, self).edit_form(obj)
+
+
+# 停车订单管理界面定义,具体的方法解释见'ModelView_UserOrder'
+class ModelView_UserOrder(CustomView):
+    can_create = False
+    can_view_details = True
+    can_edit = False
+    can_export = True
+    is_userOrder = True
+
+    def __init__(self, session, **kwargs):
+
+        self.column_list = ('seq', 'payway', 'ticket','license_plate',  'pay_type', 'wechat_id','alipay_id',
+                            'time', 'entry', 'quit_time', 'pay_time',
+                            'discount', 'price', 'coupon_price', 'ActualPrice', 'isPaid', 'paymentNr', 'isInvoice',
+                            'chooseCouponId', 'seller_name', 'park_id', 'park_name', 'company_name', 'out_trade_no','wechat_openId','third_wechat_openId')
+        self.column_default_sort = ('pay_time', True)
+        self.column_labels = dict(ticket='票据',
+                                  wechat_id='微信号',
+                                  wechat_openId='微信OPEN_ID',
+                                  alipay_id='支付宝号',
+                                  alipay_openId='支付宝OPEN_ID',
+                                  pay_type='支付类型',
+                                  license_plate='车牌号',
+                                  seq='订单号',
+                                  time='停留时间',
+                                  entry='进库时间',
+                                  quit_time='订单时间',
+                                  paymentNr='缴费次数',
+                                  discount='折扣',
+                                  price='应收金额',
+                                  isPaid='是否支付',
+                                  isInvoice='发票状态',
+                                  park_id='停车场编号',
+                                  park_name='停车场名称',
+                                  pay_time='付费时间',
+                                  company_name='物业公司',
+                                  chooseCouponId='优惠券编号',
+                                  seller_name='优惠券商家',
+                                  ActualPrice='实收金额',
+                                  coupon_price='优惠金额',
+                                  out_trade_no='平台订单',
+                                  third_wechat_openId='第三方微信OPEN_ID',
+                                  payway='支付方式'
+                                  )
+        self.column_filters = (
+        'seq', 'company_name', 'park_name', 'pay_time', 'ActualPrice', 'pay_type', 'isPaid', 'out_trade_no')
+        self.column_searchable_list = ('seq', 'ticket', 'wechat_id', 'wechat_openId', 'seq', 'license_plate', 'entry',
+                                       'paymentNr', 'quit_time', 'discount', 'price', 'chooseCouponId', 'ActualPrice',
+                                       'park_id', 'park_name', 'company_name', 'out_trade_no','third_wechat_openId')
+
+        self.column_formatters = dict(ticket=lambda u, v, m, p: self.format_ticket(m.ticket),
+                                      time=lambda u, v, m, p: format_seconds_to_hhmmss(m.time),
+                                      isPaid=lambda u, v, m, p: ['否', '是'][m.isPaid],
+                                      payway=lambda u, v, m, p: self.get_payway(m.payway),
+                                      isInvoice=lambda u, v, m, p: ['未发放', '已发放'][m.isInvoice],
+                                      pay_type=lambda u, v, m, p: self.get_paytype(m.pay_type),
+                                      ActualPrice=lambda u, v, m, p: self.get_ActualPrice_Show(m.isPaid, m.ActualPrice)
+                                      )
+
+        self.column_formatters_export = dict(ticket=lambda u, v, m, p: self.format_ticket(m.ticket),
+                                             time=lambda u, v, m, p: format_seconds_to_hhmmss(m.time),
+                                             isPaid=lambda u, v, m, p: ['否', '是'][m.isPaid],
+                                             payway=lambda u, v, m, p: self.get_payway(m.payway),
+                                             isInvoice=lambda u, v, m, p: ['未发放', '已发放'][m.isInvoice],
+                                             pay_type=lambda u, v, m, p: self.get_paytype(m.pay_type),
+                                             ActualPrice=lambda u, v, m, p: self.get_ActualPrice_Show(m.isPaid,
+                                                                                                      m.ActualPrice),
+                                             out_trade_no=lambda u, v, m, p: '\''+m.out_trade_no,
+                                             )
+        invoice_select = SelectField('发票状态', choices=[('0', '未发放'),
+                                                      ('1', '已发放')])
+
+        self.form_columns = ('invoice_select',)
+        self.form_extra_fields = {
+            'invoice_select': invoice_select
+        }
+        self.form_edit_rules = ('invoice_select',)
+        self.column_details_exclude_list = ('ticket_from')
+        super(ModelView_UserOrder, self).__init__(UserOrder, session, **kwargs)
+
+    def get_paytype(self, paytype):
+        if paytype == 1:
+            return '1.微信'
+        elif paytype == 2:
+            return '2.支付宝'
+        else:
+            return '未知'
+
+    def get_payway(self, payway):
+        if payway == '0':
+            return '1.车票'
+        elif payway == '1':
+            return '2.车牌'
+        else:
+            return '未知'
+
+    def get_ActualPrice_Show(self, isPaid, ActualPrice):
+        if isPaid:
+            return ActualPrice
+        else:
+            return '0.00'
+
+    def format_ticket(self, ticket):
+        if ticket:
+            parkid = ticket[0:4]
+            ticket = ticket[5:-3] + '.' + parkid
+            return ticket
+
+    def _handle_view(self, name, *args, **kwargs):
+        # 根据管理员等级显示不同的界面
+        user = current_user
+        if user.has_role('SuperAdmin'):
+            self.can_edit = True
+            self.column_filters = ('seq', 'wechat_id', 'ticket', 'license_plate', 'company_name',
+                                   'park_name', 'pay_time', 'ActualPrice', 'pay_type', 'alipay_id', 'isPaid',
+                                   'out_trade_no')
+        elif user.has_role('PropertyAdmin'):
+            self.can_edit = True
+            self.column_filters = ('seq', 'ticket', 'license_plate', 'park_name', 'pay_time', 'ActualPrice',
+                                   'pay_type', 'isPaid')
+        elif user.has_role('ParkAdmin'):
+            self.can_edit = True
+            self.column_filters = ('seq', 'ticket', 'license_plate', 'pay_time', 'ActualPrice', 'pay_type',
+                                   'isPaid')
+        elif user.has_role('ParkOperator'):
+            self.can_edit = False
+            self.column_filters = ('seq', 'pay_time', 'ActualPrice', 'pay_type', 'isPaid')
+        elif user.has_role('ParkAccountant'):
+            self.can_edit = False
+            self.column_filters = ('seq', 'pay_time', 'ActualPrice', 'pay_type', 'isPaid')
+        # 刷新form_rules属性
+        super(ModelView_UserOrder, self)._refresh_cache()
+        super(ModelView_UserOrder, self)._handle_view(name, *args, **kwargs)
+
+    def get_query(self):
+
+        date_today = datetime.date.today()
+        data_tomorrow = date_today + datetime.timedelta(days=1)
+        year = date_today.year
+        month = date_today.month
+        monday = date_today + datetime.timedelta(0 - date_today.weekday())
+        monthFirstDay = datetime.date(year, month, 1)
+        if current_user.has_role('SuperAdmin'):
+            if request.args.get('alter') == 'today_income':
+                return UserOrder.objects.filter(pay_time__gte=date_today, isPaid=True)
+            if request.args.get('alter') == 'week_income':
+                return UserOrder.objects.filter(pay_time__gte=monday, pay_time__lte=data_tomorrow, isPaid=True)
+            if request.args.get('alter') == 'month_income':
+                return UserOrder.objects.filter(pay_time__gte=monthFirstDay, pay_time__lte=data_tomorrow,
+                                                isPaid=True)
+            return self.model.objects
+        elif current_user.has_role('PropertyAdmin'):
+
+            if request.args.get('alter') == 'today_income':
+                return UserOrder.objects.filter(pay_time__gte=date_today,
+                                                company_name=str(current_user.company), isPaid=True)
+            if request.args.get('alter') == 'week_income':
+                return UserOrder.objects.filter(pay_time__gte=monday, pay_time__lte=data_tomorrow,
+                                                company_name=str(current_user.company), isPaid=True)
+            if request.args.get('alter') == 'month_income':
+                return UserOrder.objects.filter(pay_time__gte=monthFirstDay, pay_time__lte=data_tomorrow,
+                                                company_name=str(current_user.company), isPaid=True)
+            return self.model.objects(company_name=str(current_user.company));
+        elif current_user.has_role('ParkSeller'):
+            park_id_name = str(current_user.park)
+            seller_name = str(current_user.username)
+            parkid = park_id_name[0:4]
+
+            if request.args.get('alter') == 'today_income':
+                return UserOrder.objects.filter(pay_time__gte=date_today,
+                                                park_id=parkid, isPaid=True, seller_name=seller_name)
+            if request.args.get('alter') == 'week_income':
+                return UserOrder.objects.filter(pay_time__gte=monday, pay_time__lte=data_tomorrow,
+                                                park_id=parkid, isPaid=True, seller_name=seller_name)
+            if request.args.get('alter') == 'month_income':
+                return UserOrder.objects.filter(pay_time__gte=monthFirstDay, pay_time__lte=data_tomorrow,
+                                                park_id=parkid, isPaid=True, seller_name=seller_name)
+            return UserOrder.objects.filter(park_id=parkid, isPaid=True, seller_name=seller_name)
+        else:
+            park_id_name = str(current_user.park)
+            parkid = park_id_name[0:4]
+            if request.args.get('alter') == 'today_income':
+                return UserOrder.objects.filter(pay_time__gte=date_today, park_id=parkid, isPaid=True)
+            if request.args.get('alter') == 'week_income':
+                return UserOrder.objects.filter(pay_time__gte=monday, pay_time__lte=data_tomorrow,
+                                                park_id=parkid, isPaid=True)
+            if request.args.get('alter') == 'month_income':
+                return UserOrder.objects.filter(pay_time__gte=monthFirstDay, pay_time__lte=data_tomorrow,
+                                                park_id=parkid, isPaid=True)
+
+            return self.model.objects(park_id=parkid)
+
+    def on_model_change(self, form, model, is_created):
+        if is_created == False:
+            if form.invoice_select.data == '0':
+                model.isInvoice = False
+            else:
+                model.isInvoice = True
+
+    def get_list(self, page, sort_field, sort_desc, search, filters,
+                 page_size=None):
+        # Grab parameters from URL
+        view_args = self._get_list_extra_args()
+        # Map column index to column name
+        sort_column = self._get_column_by_idx(view_args.sort)
+        if sort_column is not None:
+            sort_column = sort_column[0]
+        # Get count and data
+        count, data = super(ModelView_UserOrder, self).get_list(view_args.page, sort_column, view_args.sort_desc,
+                                                                view_args.search, view_args.filters)
+        name = '收费明细 ' + '(共' + str(count) + '条)';
+        self.name = name
+        return count, data
+
+    @expose('/export/cvs_UserOrder')
+    def export_cvs_UserOrder(self):
+        """
+            Export a CSV of records.
+        """
+        return_url = get_redirect_target() or self.get_url('.index_view')
+
+        if not self.can_export:
+            flash(gettext('Permission denied.'))
+            return redirect(return_url)
+
+        # Macros in column_formatters are not supported.
+        # Macros will have a function name 'inner'
+        # This causes non-macro functions named 'inner' not work.
+        for col, func in iteritems(self.column_formatters):
+            if func.__name__ == 'inner':
+                raise NotImplementedError(
+                        'Macros not implemented. Override with '
+                        'column_formatters_export. Column: %s' % (col,)
+                )
+
+        # Grab parameters from URL
+        view_args = self._get_list_extra_args()
+
+        # Map column index to column name
+        sort_column = self._get_column_by_idx(view_args.sort)
+        if sort_column is not None:
+            sort_column = sort_column[0]
+
+        # Get count and data
+        count, data = self.get_list_all(sort_column, view_args.sort_desc,
+                                        view_args.search, view_args.filters)
+
+        # https://docs.djangoproject.com/en/1.8/howto/outputting-csv/
+        class Echo(object):
+            """
+            An object that implements just the write method of the file-like
+            interface.
+            """
+
+            def write(self, value):
+                """
+                Write the value by returning it, instead of storing
+                in a buffer.
+                """
+                return value
+
+        writer = csv.writer(Echo())
+
+        def generate():
+            # Append the column titles at the beginning
+            yield b'\xef\xbb\xbf'
+            titles = [csv_encode(c[1]) for c in self._export_columns]
+            yield writer.writerow(titles)
+
+            totalActualPrice = 0.0
+            totalpreferentialPrice = 0.0
+            totalPrice = 0.0
+            # propertyCompanys = []
+            # isCompanyContain = False
+            # companys = ''
+            # parks = []
+            # isParkContain = False
+            # parksStr = ''
+            record={}
+            for row in data:
+                vals = [csv_encode(self.get_export_value(row, c[0]))
+                        for c in self._export_columns]
+
+                if vals[0] in record.keys():
+
+
+                    vallist=record[vals[0]]
+                    if vallist:
+                        vallist.append(vals)
+                        record[vals[0]] = vallist
+                else:
+                    vallist=[]
+                    vallist.append(vals)
+                    record[vals[0]]=vallist
+
+                actualPrice = 0.00
+                discount = 0.00
+                price = 0.00
+                couponPrice = 0.00
+                if vals[13] != '' and vals[14] != None:
+                    actualPrice = float(vals[14])
+                if vals[11] != '' and vals[11] != None:
+                    discount = (float(vals[11]))
+                if vals[12] != '' and vals[12] != None:
+                    price = float(vals[12])
+                if vals[13] != '' and vals[13] != None:
+                    couponPrice = float(vals[13])
+
+                totalActualPrice += actualPrice
+                totalpreferentialPrice += (discount + couponPrice)
+
+                totalPrice += price
+
+
+                yield writer.writerow(vals)
+
+            totalActualPrice = float('%0.2f' % totalActualPrice)
+            totalpreferentialPrice = float('%0.2f' % totalpreferentialPrice)
+            totalPrice = float('%0.2f' % totalPrice)
+
+            statistical_result_line1 = [''] * 17
+            statistical_result_line1[1] = '应收金额'
+            statistical_result_line1[2] = totalPrice
+            yield writer.writerow(statistical_result_line1)
+
+            statistical_result_line2 = [''] * 17
+            statistical_result_line2[1] = '优惠总金额'
+            statistical_result_line2[2] = totalpreferentialPrice
+            yield writer.writerow(statistical_result_line2)
+
+            statistical_result_line3 = [''] * 17
+            statistical_result_line3[1] = '实际金额'
+            statistical_result_line3[2] = totalActualPrice
+            yield writer.writerow(statistical_result_line3)
+
+
+            yield writer.writerow(['',''])
+            yield writer.writerow(['',''])
+            note =['','可能异常数据']
+            yield writer.writerow(note)
+
+            for (k, v) in record.items():
+
+                if len(v) > 1 :
+                   for getval in v:
+                    yield writer.writerow(getval)
+
+        filename = '%s_%s.csv' % (self.name, time.strftime("%Y-%m-%d_%H-%M"))
+
+        disposition = 'attachment;filename=%s' % (secure_filename(filename),)
+
+        return Response(
+                stream_with_context(generate()),
+                headers={'Content-Disposition': disposition},
+                mimetype='text/csv',
+        )
+
+    def get_list_all(self, sort_column, sort_desc, search, filters,
+                     execute=True):
+        """
+            Get list of objects from MongoEngine
+            :param sort_column:
+                Sort column
+            :param sort_desc:
+                Sort descending
+            :param search:
+                Search criteria
+            :param filters:
+                List of applied filters
+            :param execute:
+                Run query immediately or not
+        """
+        query = self.get_query()
+
+        # Filters
+        if self._filters:
+            for flt, flt_name, value in filters:
+                f = self._filters[flt]
+                query = f.apply(query, f.clean(value))
+
+        # Search
+        if self._search_supported and search:
+            query = self._search(query, search)
+
+        # Get count
+        count = query.count() if not self.simple_list_pager else None
+
+        # Sorting
+        if sort_column:
+            query = query.order_by('%s%s' % ('-' if sort_desc else '', sort_column))
+        else:
+            order = self._get_default_order()
+
+            if order:
+                query = query.order_by('%s%s' % ('-' if order[1] else '', order[0]))
+
+        if execute:
+            query = query.all()
+
+        return count, query
+
+
+# 卡券管理界面定义,具体的方法解释见'ModelView_CouponManagement'
+class ModelView_CouponManagement(CustomView):
+    can_view_details = True
+    can_export = True
+    is_couponManagement = True
+
+    def __init__(self, session, **kwargs):
+        self.column_default_sort = ("start_date", True)
+        self.column_list = ('coupon_name',
+                            'coupon_id',
+                            'price',
+                            'receive_date',
+                            'receive_close_date',
+                            'start_date',
+                            'valid_date',
+                            'receive_count',
+                            'coupon_type',
+                            'amount',
+                            'received_amount',
+                            'used_amount',
+                            'parks',
+                            'coupon_status',
+                            'seller_name',
+                            'monetary'
+                            )
+        self.column_labels = dict(coupon_name='卡券名称',
+                                  coupon_id='领取编码',
+                                  price='价值',
+                                  receive_date='活动开始时间',
+                                  receive_close_date='活动结束时间',
+                                  start_date='起始有效时间',
+                                  valid_date='有效时间截止至',
+                                  receive_count='获取数量',
+                                  coupon_type='卡券类型',
+                                  amount='总量',
+                                  received_amount='已领取数量',
+                                  used_amount='已使用数量',
+                                  parks='指定停车场',
+                                  coupon_status='卡券状态',
+                                  used_coupons='已领券码',
+                                  seller_name='卡券商家',
+                                  monetary='消费金额'
+                                  )
+        park_select = SelectMultipleField('停车场',
+                                          choices=[], validators=[DataRequired()]
+                                          )
+        status_select = SelectField('卡券状态',
+                                    choices=[('0', '未激活'),
+                                             ('1', '已激活'),
+                                             ('2', '已过期')],
+                                    validators=[DataRequired()]
+                                    )
+        input_coupon_id = StringField('领取编码', validators=[DataRequired()])
+        self.form_extra_fields = {
+            'park_select': park_select,
+            'status_select': status_select,
+            'input_coupon_id': input_coupon_id
+        }
+        self.form_args = dict(
+
+                coupon_name=dict(label='卡券名称'),
+                input_coupon_id=dict(label='领取编码', validators=[DataRequired(), self.validate_unique,
+                                                               Regexp(regex=r'^\d{8}$', message='请输入用户领取卡券使用的8位数字编码')]),
+                price=dict(label='价值(仅数字)', validators=[DataRequired(),
+                                                        Regexp(regex=r'^([1-9]\d*|\d+\.\d+)$', message='请输入正数')]),
+                receive_date=dict(label='活动开始时间', validators=[DataRequired()]),
+                receive_close_date=dict(label='获取结束时间', validators=[DataRequired()]),
+                start_date=dict(label='起始有效时间', validators=[DataRequired()]),
+                valid_date=dict(label='有效时间截止至', validators=[DataRequired()]),
+                receive_count=dict(label='获取数量', validators=[DataRequired(),
+                                                        Regexp(regex=r'^[1-9]\d*$|^0$', message='请输入正整数')]),
+                coupon_type=dict(label='卡券类型'),
+                amount=dict(label='总量', validators=[DataRequired(),
+                                                        Regexp(regex=r'^[1-9]\d*$|^0$', message='请输入正整数')]),
+                park_select=dict(label='指定停车场', validators=[DataRequired()]),
+                coupon_status=dict(label='卡券状态'),
+        )
+        self.column_filters = ('coupon_name', 'coupon_id')
+        self.column_export_list = ('coupon_id', 'amount')
+        self.column_searchable_list = ('coupon_name', 'coupon_id', 'coupon_type', 'parks', 'coupon_status')
+        self.form_create_rules = ('coupon_name',
+                                  'input_coupon_id',
+                                  'price',
+                                  'receive_date',
+                                  'receive_close_date',
+                                  'start_date',
+                                  'valid_date',
+                                  'receive_count',
+                                  'coupon_type',
+                                  'amount',
+                                  'park_select',
+                                  'status_select',
+                                  'seller_name',
+                                  'monetary'
+                                  )
+        self.form_edit_rules = (
+            'receive_close_date',
+            'start_date',
+            'valid_date',
+            'receive_count',
+            'amount',
+            'status_select',
+        )
+        self.column_details_exclude_list = ('park_id', 'company_name')
+        super(ModelView_CouponManagement, self).__init__(CouponManagement, session, **kwargs)
+
+    # 界面创建后回调
+    def _handle_view(self, name, *args, **kwargs):
+        # 根据管理员等级显示不同的界面
+        user = current_user
+        if user.has_role('SuperAdmin'):
+            self.form_create_rules = ('coupon_name',
+                                      'input_coupon_id',
+                                      'price',
+                                      'receive_date',
+                                      'receive_close_date',
+                                      'start_date',
+                                      'valid_date',
+                                      'receive_count',
+                                      'coupon_type',
+                                      'amount',
+                                      'park_select',
+                                      'status_select',
+                                      )
+        elif user.has_role('PropertyAdmin'):
+            self.form_create_rules = ('coupon_name',
+                                      'input_coupon_id',
+                                      'price',
+                                      'receive_date',
+                                      'receive_close_date',
+                                      'start_date',
+                                      'valid_date',
+                                      'receive_count',
+                                      'coupon_type',
+                                      'amount',
+                                      'park_select',
+                                      'status_select',
+                                      )
+        elif user.has_role('ParkAdmin'):
+            self.form_create_rules = ('coupon_name',
+                                      'input_coupon_id',
+                                      'price',
+                                      'receive_date',
+                                      'receive_close_date',
+                                      'start_date',
+                                      'valid_date',
+                                      'receive_count',
+                                      'coupon_type',
+                                      'amount',
+                                      'status_select',
+                                      )
+        elif user.has_role('ParkSeller'):
+            self.form_create_rules = ('coupon_name',
+                                      'input_coupon_id',
+                                      'price',
+                                      'receive_date',
+                                      'receive_close_date',
+                                      'start_date',
+                                      'valid_date',
+                                      'receive_count',
+                                      'coupon_type',
+                                      'amount',
+                                      'status_select',
+                                      )
+        # 刷新cache属性
+        super(ModelView_CouponManagement, self)._refresh_cache()
+        super(ModelView_CouponManagement, self)._handle_view(name, *args, **kwargs)
+
+    def scaffold_form(self):
+        form_class = super(ModelView_CouponManagement, self).scaffold_form()
+        # 根据不同等级管理员,显示不同的管理员等级下来菜单
+        if current_user:
+            if current_user.has_role('SuperAdmin'):
+                parks = ParkManagement.objects
+            elif current_user.has_role('PropertyAdmin'):
+                parks = ParkManagement.objects(company=current_user.company)
+            else:
+                park_id_name = str(current_user.park)
+                parkid = park_id_name[0:4]
+                parks = ParkManagement.objects(park_id=parkid, company=current_user.company)
+            park_opetions = []
+            for park in parks:
+                park_opetion = [park.park_id, park.park_id + ':' + park.park_name]
+                park_opetions.append(park_opetion)
+
+            form_class.park_select = SelectMultipleField('指定停车场',
+                                                         choices=park_opetions,
+                                                         validators=[DataRequired()]
+                                                         )
+            form_class.input_coupon_id = StringField('领取编码', default=self.coupon_id_unique('0'),
+                                                     validators=[DataRequired(), self.validate_unique,
+                                                                 Regexp(regex=r'^\d{8}$',
+                                                                        message='请输入用户领取卡券使用的8位数字编码')])
+
+        return form_class
+
+    # 检查唯一性
+    def validate_unique(self, form, field):
+        if CouponManagement.objects(coupon_id=field.data):
+            raise ValidationError('领取编码必须唯一')
+
+    def coupon_id_unique(self, couponId):
+        new_coupon_id = ''.join(random.sample(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], 8)).replace(" ", "")
+        if CouponManagement.objects(coupon_id=new_coupon_id):
+            self.coupon_id_unique(self, couponId)
+        return new_coupon_id
+
+    def get_query(self):
+        if current_user.has_role('SuperAdmin'):
+            return self.model.objects
+        elif current_user.has_role('PropertyAdmin'):
+            return self.model.objects(company_name=str(current_user.company))
+        elif current_user.has_role('ParkSeller'):
+            park_id_name = str(current_user.park)
+            parkid = park_id_name[0:4]
+            return self.model.objects(park_id=parkid, seller_name=current_user.username)
+        else:
+            park_id_name = str(current_user.park)
+            parkid = park_id_name[0:4]
+            return self.model.objects(park_id=parkid)
+            # return self.model.objects(parks__contains=park_id_name)
+
+    def get_one(self, id):
+        self.form_edit_rules = (
+            'receive_close_date',
+            'start_date',
+            'valid_date',
+            'receive_count',
+            'amount',
+            'status_select',
+        )
+        return super(ModelView_CouponManagement, self).get_one(id)
+
+    # 提交表单时
+    def on_model_change(self, form, model, is_created):
+        if is_created == True:
+            if current_user.has_role('SuperAdmin'):
+                park_ids = form.park_select.data
+                park_opetion = ''
+                for park_id in park_ids:
+                    park = ParkManagement.objects(park_id=park_id).first()
+                    park_opetion += park.park_id + ':' + park.park_name + ','
+
+                park_opetion = park_opetion[:-1]
+                model.parks = str(park_opetion)
+            elif current_user.has_role('PropertyAdmin'):
+                park_ids = form.park_select.data
+                park_opetion = ''
+                for park_id in park_ids:
+                    park = ParkManagement.objects(park_id=park_id).first()
+                    park_opetion += park.park_id + ':' + park.park_name + ','
+
+                park_opetion = park_opetion[:-1]
+                model.parks = str(park_opetion)
+                model.company_name = str(current_user.company)
+            elif current_user.has_role('ParkSeller'):
+                park_id_name = str(current_user.park)
+                parkid = park_id_name[0:4]
+                model.park_id = parkid
+                model.parks = str(current_user.park)
+                model.company_name = str(current_user.company)
+                model.seller_name = str(current_user.username)
+            else:
+                park_id_name = str(current_user.park)
+                parkid = park_id_name[0:4]
+                model.park_id = parkid
+                model.parks = str(current_user.park)
+                model.company_name = str(current_user.company)
+            model.coupon_id = form.input_coupon_id.data
+
+        if form.status_select.data == '0':
+            model.coupon_status = form.status_select.data + ':未激活'
+        elif form.status_select.data == '1':
+            model.coupon_status = form.status_select.data + ':已激活'
+        elif form.status_select.data == '2':
+            model.coupon_status = form.status_select.data + ':已过期'
+
+    @expose('/export/csv/couponManagement')
+    def export_csv_couponManagement(self):
+        """
+            Export a CSV of records.
+        """
+        return_url = get_redirect_target() or self.get_url('.index_view')
+
+        if not self.can_export:
+            flash(gettext('Permission denied.'))
+            return redirect(return_url)
+
+        # Macros in column_formatters are not supported.
+        # Macros will have a function name 'inner'
+        # This causes non-macro functions named 'inner' not work.
+        for col, func in iteritems(self.column_formatters):
+            if func.__name__ == 'inner':
+                raise NotImplementedError(
+                        'Macros not implemented. Override with '
+                        'column_formatters_export. Column: %s' % (col,)
+                )
+
+        # Grab parameters from URL
+        view_args = self._get_list_extra_args()
+
+        # Map column index to column name
+        sort_column = self._get_column_by_idx(view_args.sort)
+        if sort_column is not None:
+            sort_column = sort_column[0]
+
+        # Get count and data
+        count, data = self.get_list(0, sort_column, view_args.sort_desc,
+                                    view_args.search, view_args.filters,
+                                    page_size=self.export_max_rows)
+
+        # https://docs.djangoproject.com/en/1.8/howto/outputting-csv/
+        class Echo(object):
+            """
+            An object that implements just the write method of the file-like
+            interface.
+            """
+
+            def write(self, value):
+                """
+                Write the value by returning it, instead of storing
+                in a buffer.
+                """
+                return value
+
+        writer = csv.writer(Echo())
+        self.encodes = []
+
+        def generate():
+
+            encodes = []
+            # Append the column titles at the beginning
+            yield b'\xef\xbb\xbf'
+            titles = [csv_encode(c[1]) for c in self._export_columns]
+
+            yield writer.writerow(titles)
+
+            for row in data:
+                vals = [csv_encode(self.get_export_value(row, c[0]))
+                        for c in self._export_columns]
+                code = vals[0]
+                amount = int(vals[1])
+                for index in range(amount):
+                    if (index < 10):
+                        subCode = "0000" + str(index)
+                    elif (index < 100):
+                        subCode = "000" + str(index)
+                    elif (index < 1000):
+                        subCode = "00" + str(index)
+                    elif (index < 10000):
+                        subCode = "0" + str(index)
+                    else:
+                        subCode = str(index)
+                    getCode = code + subCode
+                    encode = CouponIdCrypt().encodeId(getCode)
+                    encodes.append(str(encode))
+                    newRow = [''] * 2
+                    if index == 0:
+                        newRow[1] = str(amount)
+                    newRow[0] = '\'' + str(encode)
+                    yield writer.writerow(newRow)
+
+        filename = '%s_%s.csv' % (self.name, time.strftime("%Y-%m-%d_%H-%M"))
+        disposition = 'attachment;filename=%s' % (secure_filename(filename),)
+
+        return Response(
+                stream_with_context(generate()),
+                headers={'Content-Disposition': disposition},
+                mimetype='text/csv',
+        )
+
+    @expose('/export/csv/couponManagementQr')
+    def export_csv_couponManagementQr(self):
+        """
+            Export a CSV of records.
+        """
+        return_url = get_redirect_target() or self.get_url('.index_view')
+
+        if not self.can_export:
+            flash(gettext('Permission denied.'))
+            return redirect(return_url)
+
+        # Macros in column_formatters are not supported.
+        # Macros will have a function name 'inner'
+        # This causes non-macro functions named 'inner' not work.
+        for col, func in iteritems(self.column_formatters):
+            if func.__name__ == 'inner':
+                raise NotImplementedError(
+                        'Macros not implemented. Override with '
+                        'column_formatters_export. Column: %s' % (col,)
+                )
+
+        # Grab parameters from URL
+        view_args = self._get_list_extra_args()
+
+        # Map column index to column name
+        sort_column = self._get_column_by_idx(view_args.sort)
+        if sort_column is not None:
+            sort_column = sort_column[0]
+
+        # Get count and data
+        count, data = self.get_list(0, sort_column, view_args.sort_desc,
+                                    view_args.search, view_args.filters,
+                                    page_size=self.export_max_rows)
+
+        self.encodes = []
+        for row in data:
+            vals = [csv_encode(self.get_export_value(row, c[0]))
+                    for c in self._export_columns]
+
+            code = vals[0]
+            amount = int(vals[1])
+
+            for index in range(amount):
+                if (index < 10):
+                    subCode = "0000" + str(index)
+                elif (index < 100):
+                    subCode = "000" + str(index)
+                elif (index < 1000):
+                    subCode = "00" + str(index)
+                elif (index < 10000):
+                    subCode = "0" + str(index)
+                else:
+                    subCode = str(index)
+
+                getCode = code + subCode
+
+                encode = CouponIdCrypt().encodeId(getCode)
+                self.encodes.append(str(encode))
+
+        return render_template('qrcode.html', admin_view=self)
+
+    @expose('/export/csv/couponManagementQrN')
+    def export_csv_couponManagementQrN(self):
+        """
+            Export a CSV of records.
+        """
+        return_url = get_redirect_target() or self.get_url('.index_view')
+
+        if not self.can_export:
+            flash(gettext('Permission denied.'))
+            return redirect(return_url)
+
+        # Macros in column_formatters are not supported.
+        # Macros will have a function name 'inner'
+        # This causes non-macro functions named 'inner' not work.
+        for col, func in iteritems(self.column_formatters):
+            if func.__name__ == 'inner':
+                raise NotImplementedError(
+                        'Macros not implemented. Override with '
+                        'column_formatters_export. Column: %s' % (col,)
+                )
+
+        # Grab parameters from URL
+        view_args = self._get_list_extra_args()
+
+        # Map column index to column name
+        sort_column = self._get_column_by_idx(view_args.sort)
+        if sort_column is not None:
+            sort_column = sort_column[0]
+
+        # Get count and data
+        count, data = self.get_list(0, sort_column, view_args.sort_desc,
+                                    view_args.search, view_args.filters,
+                                    page_size=self.export_max_rows)
+
+        self.encodes = []
+        for row in data:
+            vals = [csv_encode(self.get_export_value(row, c[0]))
+                    for c in self._export_columns]
+
+            code = vals[0]
+            self.encodes.append(str(code))
+
+        return render_template('qrcode.html', admin_view=self)
+
+
+# 发票管理界面的定义 具体的方法解释见'ModelView_InvoiceManagement'
+class ModelView_InvoiceManagement(CustomView):
+    can_view_details = True
+    can_export = False
+    is_discountManagement = True
+
+    def __init__(self, session, **kwargs):
+        self.column_default_sort = ("parks", True)
+        self.column_list = ('invoice_switch',
+                            'invoice_btn_name',
+                            'invoice_prompt_url',
+                            'parks',
+                            )
+        self.column_labels = dict(
+                                company_name='物业公司',
+                                parks='指定停车场',
+                                invoice_switch='发票领取开关',
+                                invoice_prompt_data='发票领取提示',
+                                invoice_btn_name='领取按钮文字',
+                                invoice_prompt_url='领取按钮URL',
+                                  )
+        invoice_switch_select = SelectField('发票领取开关',
+                                           choices=[('0', '打开'),
+                                                    ('1', '关闭')],
+                                           validators=[DataRequired()]
+                                           )
+        park_select = SelectMultipleField('停车场',
+                                          choices=[], validators=[DataRequired()]
+                                          )
+        self.form_extra_fields = {
+            'invoice_switch_select': invoice_switch_select,
+            'park_select': park_select
+        }
+        self.form_args = dict(
+                              company_name=dict(label='物业公司'),
+                              park_select=dict(label='指定停车场', validators=[DataRequired()]),
+                              invoice_switch_select=dict(label='发票领取开关'),
+                              invoice_prompt_data=dict(label='发票领取提示'),
+                              invoice_btn_name=dict(label='领取按钮文字'),
+                              invoice_prompt_url=dict(label='领取按钮URL'),
+                              )
+        # self.column_filters = ('park_id')
+        #self.column_searchable_list = ('parks')
+        self.form_create_rules = (
+            'invoice_switch_select',
+            'invoice_prompt_data',
+            'invoice_btn_name',
+            'invoice_prompt_url',
+            'park_select',
+                                  )
+        self.form_edit_rules = (
+            'invoice_switch_select',
+            'invoice_prompt_data',
+            'invoice_btn_name',
+            'invoice_prompt_url',
+            'park_select',
+        )
+        self.column_details_exclude_list = ('park_id')
+        super(ModelView_InvoiceManagement, self).__init__(InvoiceManagement, session, **kwargs)
+
+    def scaffold_form(self):
+        form_class = super(ModelView_InvoiceManagement, self).scaffold_form()
+        # 根据不同等级管理员,显示不同的管理员等级下来菜单
+        if current_user:
+            if current_user.has_role('SuperAdmin'):
+                parks = ParkManagement.objects
+            if current_user.has_role('PropertyAdmin'):
+                parks = ParkManagement.objects(company=current_user.company)
+            if current_user.has_role('ParkAdmin'):
+                park_id_name = str(current_user.park)
+                parkid = park_id_name[0:4]
+                parks = ParkManagement.objects(park_id=parkid, company=current_user.company)
+            park_opetions = []
+            for park in parks:
+                park_opetion = [park.park_id, park.park_id + ':' + park.park_name]
+                park_opetions.append(park_opetion)
+
+            form_class.park_select = SelectMultipleField('指定停车场',
+                                                         choices=park_opetions,
+                                                         validators=[DataRequired()]
+                                                         )
+        return form_class
+
+    def get_query(self):
+        if current_user.has_role('SuperAdmin'):
+                return self.model.objects
+        elif current_user.has_role('PropertyAdmin'):
+            return self.model.objects(company_name=str(current_user.company));
+        else:
+            park_id_name = str(current_user.park)
+            parkid = park_id_name[0:4]
+            return self.model.objects(park_id=parkid)
+
+    def get_one(self, id):
+        self.form_edit_rules = (
+            'invoice_switch_select',
+            'invoice_prompt_data',
+            'invoice_btn_name',
+            'invoice_prompt_url',
+            'park_select',
+        )
+        return super(ModelView_InvoiceManagement, self).get_one(id)
+
+    # 提交表单时
+    def on_model_change(self, form, model, is_created):
+        if is_created == True:
+            if current_user.has_role('SuperAdmin'):
+                park_ids = form.park_select.data
+                park_opetion = ''
+                for park_id in park_ids:
+                    park = ParkManagement.objects(park_id=park_id).first()
+                    park_opetion += park.park_id + ':' + park.park_name + ','
+
+                park_opetion = park_opetion[:-1]
+                model.parks = str(park_opetion)
+                parkid =  model.parks[0:4]
+                model.park_id = parkid
+                model.company_name = park.company.company_name
+            elif current_user.has_role('PropertyAdmin'):
+                park_ids = form.park_select.data
+                park_opetion = ''
+                for park_id in park_ids:
+                    park = ParkManagement.objects(park_id=park_id).first()
+                    park_opetion += park.park_id + ':' + park.park_name + ','
+
+                park_opetion = park_opetion[:-1]
+                model.parks = str(park_opetion)
+                parkid = model.parks[0:4]
+                model.park_id = parkid
+                model.company_name = str(current_user.company)
+            else:
+                park_id_name = str(current_user.park)
+                parkid = park_id_name[0:4]
+                model.park_id = parkid
+                model.parks = str(current_user.park)
+                model.company_name = str(current_user.company)
+        model.invoice_switch = form.invoice_switch_select.choices[int(form.invoice_switch_select.data)][1]
+
+    # 界面创建后回调
+    def _handle_view(self, name, *args, **kwargs):
+        # 根据管理员等级显示不同的界面
+        user = current_user
+        if user.has_role('SuperAdmin'):
+            self.form_create_rules = ('invoice_switch_select',
+                                      'invoice_prompt_data',
+                                      'invoice_btn_name',
+                                      'invoice_prompt_url',
+                                      'park_select',
+                                      )
+        elif user.has_role('PropertyAdmin'):
+            self.form_create_rules = ('invoice_switch_select',
+                                      'invoice_prompt_data',
+                                      'invoice_btn_name',
+                                      'invoice_prompt_url',
+                                      'park_select',
+                                      )
+        elif user.has_role('ParkAdmin'):
+            self.form_create_rules = ('invoice_switch_select',
+                                      'invoice_prompt_data',
+                                      'invoice_btn_name',
+                                      'invoice_prompt_url',
+                                      )
+        # 刷新cache属性
+        super(ModelView_InvoiceManagement, self)._refresh_cache()
+        super(ModelView_InvoiceManagement, self)._handle_view(name, *args, **kwargs)
+
+
+# 折扣管理界面的定义 具体的方法解释见'ModelView_DiscountManagement'
+class ModelView_DiscountManagement(CustomView):
+    can_view_details = True
+    can_export = False
+    is_discountManagement = True
+
+    def __init__(self, session, **kwargs):
+        self.column_default_sort = ("parks", True)
+        self.column_list = ('week_day',
+                            'discount_type',
+                            'fix_discount',
+                            'random_min',
+                            'random_max',
+                            'reuse_times',
+                            'parks',
+                            )
+        self.column_labels = dict(week_day='周期',
+                                  discount_type='折扣类型',
+                                  fix_discount='固定折扣金额',
+                                  random_min='随机最小折扣金额',
+                                  random_max='随机最大折扣金额',
+                                  reuse_times='最大使用次数',
+                                  parks='指定停车场',
+                                  company_name='物业公司',
+                                  )
+        week_day_select = SelectField('周期',
+                                      choices=[('0', '星期一'),
+                                               ('1', '星期二'),
+                                               ('2', '星期三'),
+                                               ('3', '星期四'),
+                                               ('4', '星期五'),
+                                               ('5', '星期六'),
+                                               ('6', '星期日')],
+                                      validators=[DataRequired()]
+                                      )
+        discount_type_select = SelectField('折扣类型',
+                                           choices=[('0', '固定折扣'),
+                                                    ('1', '随机折扣')],
+                                           validators=[DataRequired()]
+                                           )
+        park_select = SelectMultipleField('停车场',
+                                          choices=[], validators=[DataRequired()]
+                                          )
+        self.form_extra_fields = {
+            'week_day_select': week_day_select,
+            'discount_type_select': discount_type_select,
+            'park_select': park_select
+        }
+        self.form_args = dict(week_day=dict(label='周期'),
+                              discount_type=dict(label='折扣类型'),
+                              fix_discount=dict(label='固定折扣金额', validators=[DataRequired(),
+                                                        Regexp(regex=r'^[1-9]\d*$|^0$', message='请输入正整数')]),
+                              random_min=dict(label='随机最小折扣金额', validators=[DataRequired(),
+                                                        Regexp(regex=r'^[1-9]\d*$|^0$', message='请输入正整数')]),
+                              random_max=dict(label='随机最大折扣金额', validators=[DataRequired(),
+                                                        Regexp(regex=r'^[1-9]\d*$|^0$', message='请输入正整数')]),
+                              reuse_times=dict(label='最大使用次数', validators=[DataRequired(),
+                                                        Regexp(regex=r'^[1-9]\d*$|^0$', message='请输入正整数')]),
+                              park_select=dict(label='指定停车场', validators=[DataRequired()]),
+                              )
+        # self.column_filters = ('park_id')
+        self.column_searchable_list = ('discount_type', 'parks')
+        self.form_create_rules = ('week_day_select',
+                                  'discount_type_select',
+                                  'fix_discount',
+                                  'random_min',
+                                  'random_max',
+                                  'reuse_times',
+                                  'park_select',
+                                  )
+        self.form_edit_rules = (
+            'week_day_select',
+            'discount_type_select',
+            'fix_discount',
+            'random_min',
+            'random_max',
+            'reuse_times',
+        )
+        self.column_details_exclude_list = ('park_id')
+        super(ModelView_DiscountManagement, self).__init__(DiscountManagement, session, **kwargs)
+
+    def scaffold_form(self):
+        form_class = super(ModelView_DiscountManagement, self).scaffold_form()
+        # 根据不同等级管理员,显示不同的管理员等级下来菜单
+        if current_user:
+            if current_user.has_role('SuperAdmin'):
+                parks = ParkManagement.objects
+            if current_user.has_role('PropertyAdmin'):
+                parks = ParkManagement.objects(company=current_user.company)
+            if current_user.has_role('ParkAdmin'):
+                park_id_name = str(current_user.park)
+                parkid = park_id_name[0:4]
+                parks = ParkManagement.objects(park_id=parkid, company=current_user.company)
+            park_opetions = []
+            for park in parks:
+                park_opetion = [park.park_id, park.park_id + ':' + park.park_name]
+                park_opetions.append(park_opetion)
+
+            form_class.park_select = SelectMultipleField('指定停车场',
+                                                         choices=park_opetions,
+                                                         validators=[DataRequired()],
+                                                         )
+        return form_class
+
+    def get_query(self):
+        if current_user.has_role('SuperAdmin'):
+            return self.model.objects
+        elif current_user.has_role('PropertyAdmin'):
+            return self.model.objects(company_name=str(current_user.company))
+        else:
+            park_id_name = str(current_user.park)
+            parkid = park_id_name[0:4]
+            return self.model.objects(park_id=parkid)
+
+    def get_one(self, id):
+        self.form_edit_rules = (
+            'week_day_select',
+            'discount_type_select',
+            'fix_discount',
+            'random_min',
+            'random_max',
+            'reuse_times',
+            # 'park_select'
+        )
+        return super(ModelView_DiscountManagement, self).get_one(id)
+
+    # 提交表单时
+    def on_model_change(self, form, model, is_created):
+        if is_created == True:
+            if current_user.has_role('SuperAdmin'):
+                park_ids = form.park_select.data
+                park_opetion = ''
+                for park_id in park_ids:
+                    park = ParkManagement.objects(park_id=park_id).first()
+                    park_opetion += park.park_id + ':' + park.park_name + ','
+
+                park_opetion = park_opetion[:-1]
+                model.parks = str(park_opetion)
+                parkid = model.parks[0:4]
+                model.park_id = parkid
+                model.company_name = park.company.company_name
+            elif current_user.has_role('PropertyAdmin'):
+                park_ids = form.park_select.data
+                park_opetion = ''
+                for park_id in park_ids:
+                    park = ParkManagement.objects(park_id=park_id).first()
+                    park_opetion += park.park_id + ':' + park.park_name + ','
+
+                park_opetion = park_opetion[:-1]
+                model.parks = str(park_opetion)
+                model.company_name = str(current_user.company)
+            else:
+                park_id_name = str(current_user.park)
+                parkid = park_id_name[0:4]
+                model.park_id = parkid
+                model.parks = str(current_user.park)
+                model.company_name = str(current_user.company)
+        model.week_day = form.week_day_select.choices[int(form.week_day_select.data)][1]
+        model.discount_type = form.discount_type_select.choices[int(form.discount_type_select.data)][1]
+
+    # 界面创建后回调
+    def _handle_view(self, name, *args, **kwargs):
+        # 根据管理员等级显示不同的界面
+        user = current_user
+        if user.has_role('SuperAdmin'):
+            self.form_create_rules = ('week_day_select',
+                                      'discount_type_select',
+                                      'fix_discount',
+                                      'random_min',
+                                      'random_max',
+                                      'reuse_times',
+                                      'park_select',
+                                      )
+        elif user.has_role('PropertyAdmin'):
+            self.form_create_rules = ('week_day_select',
+                                      'discount_type_select',
+                                      'fix_discount',
+                                      'random_min',
+                                      'random_max',
+                                      'reuse_times',
+                                      'park_select',
+                                      )
+        elif user.has_role('ParkAdmin'):
+            self.form_create_rules = ('week_day_select',
+                                      'discount_type_select',
+                                      'fix_discount',
+                                      'random_min',
+                                      'random_max',
+                                      'reuse_times',
+                                      'park_select',
+                                      )
+        # 刷新cache属性
+        super(ModelView_DiscountManagement, self)._refresh_cache()
+        super(ModelView_DiscountManagement, self)._handle_view(name, *args, **kwargs)
+
+
+# 用户管理界面的定义
+class ModelView_ParkUser(CustomView):
+    can_create = False
+    can_edit = False
+    can_view_details = True
+    can_export = True
+    is_user = True
+
+    def __init__(self, session, **kwargs):
+        self.column_default_sort = ("create_time", True)
+        self.column_exclude_list = (
+            'password', 'varify_code', 'coupon_list', 'alipay_openId', 'park_id', 'company_name')
+        self.column_labels = dict(
+                password='密码',
+                wechat_id='微信账号',
+                wechat_openId='微信OPEN_ID',
+                alipay_id='支付宝账号',
+                alipay_openId='支付宝OPEN_ID',
+                mobile='移动电话',
+                license_plate='车牌号',
+                create_time='创建时间',
+                park_id='停车场ID',
+                company_name='物业公司'
+        )
+        self.form_args = dict(
+                username=dict(label='用户名'),
+                password=dict(label='密码'),
+                wechat_id=dict(label='微信号'),
+                wechat_openId=dict(label='微信OPEN_ID'),
+                mobile=dict(label='移动电话'),
+                license_plate=dict(label='车牌号'),
+                create_time=dict(label='创建时间')
+        )
+        self.column_searchable_list = (
+            'wechat_id', 'alipay_id', 'mobile', 'license_plate', 'park_id', 'company_name')
+        self.column_details_exclude_list = ('park_id', 'company_name', 'varify_code', 'coupon_list')
+        self._export_columns = ('username', 'wechat_id', 'wechat_openId', 'mobile', 'license_plate', 'create_time')
+        super(ModelView_ParkUser, self).__init__(User, session, **kwargs)
+
+    def get_query(self):
+        if current_user.has_role('SuperAdmin'):
+            if request.args.get('alter') == 'today_regist':
+                date_today = datetime.date.today()
+                return User.objects.filter(mobile__ne='')
+            return self.model.objects
+        elif current_user.has_role('PropertyAdmin'):
+            return self.model.objects(company_name=str(current_user.company))
+        else:
+            park_id_name = str(current_user.park)
+            parkid = park_id_name[0:4]
+            return self.model.objects(park_id=parkid)
+
+
+    @expose('/export/csv_user')
+    def export_csv_user(self):
+        """
+            Export a CSV of records.
+        """
+        return_url = get_redirect_target() or self.get_url('.index_view')
+
+        if not self.can_export:
+            flash(gettext('Permission denied.'))
+            return redirect(return_url)
+
+        # Macros in column_formatters are not supported.
+        # Macros will have a function name 'inner'
+        # This causes non-macro functions named 'inner' not work.
+        for col, func in iteritems(self.column_formatters):
+            if func.__name__ == 'inner':
+                raise NotImplementedError(
+                    'Macros not implemented. Override with '
+                    'column_formatters_export. Column: %s' % (col,)
+                )
+
+        # Grab parameters from URL
+        view_args = self._get_list_extra_args()
+
+        # Map column index to column name
+        sort_column = self._get_column_by_idx(view_args.sort)
+        if sort_column is not None:
+            sort_column = sort_column[0]
+
+        # Get count and data
+        count, data = self.get_list(0, sort_column, view_args.sort_desc,
+                                    view_args.search, view_args.filters,
+                                    page_size=self.export_max_rows)
+
+        # https://docs.djangoproject.com/en/1.8/howto/outputting-csv/
+        class Echo(object):
+            """
+            An object that implements just the write method of the file-like
+            interface.
+            """
+            def write(self, value):
+                """
+                Write the value by returning it, instead of storing
+                in a buffer.
+                """
+                return value
+
+        writer = csv.writer(Echo())
+
+        def generate():
+            # Append the column titles at the beginning
+            yield b'\xef\xbb\xbf'
+            titles = [csv_encode(c[1]) for c in self._export_columns]
+            yield writer.writerow(titles)
+
+            for row in data:
+                vals = [csv_encode(self.get_export_value(row, c[0]))
+                        for c in self._export_columns]
+                yield writer.writerow(vals)
+
+        filename = '%s_%s.csv' % (self.name, time.strftime("%Y-%m-%d_%H-%M"))
+
+        disposition = 'attachment;filename=%s' % (secure_filename(filename),)
+
+        return Response(
+            stream_with_context(generate()),
+            headers={'Content-Disposition': disposition},
+            mimetype='text/csv'
+        )
+
+
+# Create customized index view class that handles login & registration
+class AdminIndexView(admin.AdminIndexView):
+    def _stubs(self):
+        self.nav = {
+            "tasks": stub.get_tasks(),
+            "messages": stub.get_messages_summary(),
+            "alerts": stub.get_alerts()
+        }
+
+        (cols, rows) = stub.get_adv_tables()
+        (scols, srows, context) = stub.get_tables()
+
+        self.tables = {
+            "advtables": {"columns": cols, "rows": rows},
+            "table": {"columns": scols, "rows": srows, "context": context}
+        }
+
+        self.panelswells = {
+            "accordion": stub.get_accordion_items(),
+            "tabitems": stub.get_tab_items()
+        }
+
+    @expose('/')
+    @login_required
+    def index(self):
+        self._stubs()
+        self.name = "首页"
+        self.today_income = 0.00
+        self.week_income = 0.00
+        self.month_income = 0.00
+        self.today_coupon = 0.00
+        self.week_coupon = 0.00
+        self.month_coupon = 0.00
+        today_incomes = []
+        week_incomes = []
+        month_incomes = []
+        date_today = datetime.date.today()
+        data_tomorrow = date_today + datetime.timedelta(days=1)
+        year = date_today.year
+        month = date_today.month
+        monday = date_today + datetime.timedelta(0 - date_today.weekday())
+        monthFirstDay = datetime.date(year, month, 1)
+        self.current_user = current_user
+        self.today_parked_count = 0
+        self.today_regist_count = 0
+        self.all_regist_count = 0
+        # sunday = date_today + datetime.timedelta(6 - date_today.weekday())
+
+
+        if current_user.has_role('SuperAdmin'):
+            today_incomes = UserOrder.objects.filter(pay_time__gte=date_today, isPaid=True)
+            week_incomes = UserOrder.objects.filter(pay_time__gte=monday, pay_time__lte=data_tomorrow, isPaid=True)
+            month_incomes = UserOrder.objects.filter(pay_time__gte=monthFirstDay, pay_time__lte=data_tomorrow,
+                                                     isPaid=True)
+            self.today_parked_count = today_incomes.count()
+            self.today_regist_count = User.objects.filter(mobile__ne='').count()
+            self.all_regist_count = User.objects.count()
+
+        if current_user.has_role('PropertyAdmin'):
+            today_incomes = UserOrder.objects.filter(pay_time__gte=date_today,
+                                                     company_name=str(current_user.company), isPaid=True)
+            week_incomes = UserOrder.objects.filter(pay_time__gte=monday, pay_time__lte=data_tomorrow,
+                                                    company_name=str(current_user.company), isPaid=True)
+            month_incomes = UserOrder.objects.filter(pay_time__gte=monthFirstDay, pay_time__lte=data_tomorrow,
+                                                     company_name=str(current_user.company), isPaid=True)
+            self.today_parked_count = today_incomes.count()
+
+        if current_user.has_role('ParkAdmin') or current_user.has_role('ParkOperator') or current_user.has_role(
+                'ParkAccountant'):
+            park_id_name = str(current_user.park)
+            parkid = park_id_name[0:4]
+            today_incomes = UserOrder.objects.filter(pay_time__gte=date_today, park_id=parkid, isPaid=True)
+            week_incomes = UserOrder.objects.filter(pay_time__gte=monday, pay_time__lte=data_tomorrow,
+                                                    park_id=parkid, isPaid=True)
+            month_incomes = UserOrder.objects.filter(pay_time__gte=monthFirstDay, pay_time__lte=data_tomorrow,
+                                                     park_id=parkid, isPaid=True)
+            self.today_parked_count = today_incomes.count()
+
+        if current_user.has_role('ParkSeller'):
+            park_id_name = str(current_user.park)
+            parkid = park_id_name[0:4]
+            today_incomes = UserOrder.objects.filter(pay_time__gte=date_today, park_id=parkid, isPaid=True,
+                                                     seller_name=current_user.username)
+            week_incomes = UserOrder.objects.filter(pay_time__gte=monday, pay_time__lte=data_tomorrow,
+                                                    park_id=parkid, isPaid=True, seller_name=current_user.username)
+            month_incomes = UserOrder.objects.filter(pay_time__gte=monthFirstDay, pay_time__lte=data_tomorrow,
+                                                 park_id=parkid, isPaid=True, seller_name=current_user.username)
+            self.today_parked_count = today_incomes.count()
+            for _today_income in today_incomes:
+                self.today_coupon += float(_today_income.coupon_price)
+            for _week_income in week_incomes:
+                self.week_coupon += float(_week_income.coupon_price)
+            for _month_income in month_incomes:
+                self.month_coupon += float(_month_income.coupon_price)
+            self.today_coupon = float('%0.2f' % (self.today_coupon))
+            self.week_coupon = float('%0.2f' % self.week_coupon)
+            self.month_coupon = float('%0.2f' % self.month_coupon)
+        else:
+            for _today_income in today_incomes:
+                self.today_income += float(_today_income.ActualPrice)
+            for _week_income in week_incomes:
+                self.week_income += float(_week_income.ActualPrice)
+            for _month_income in month_incomes:
+                self.month_income += float(_month_income.ActualPrice)
+
+            self.today_income = float('%0.2f' % (self.today_income))
+            self.week_income = float('%0.2f' % self.week_income)
+            self.month_income = float('%0.2f' % self.month_income)
+        return render_template('sb-admin/pages/dashboard.html', admin_view=self)
+
+    @expose('/blank')
+    def blank(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+
+        self._stubs()
+        self.name = "Blank"
+        return render_template('sb-admin/pages/blank.html', admin_view=self)
+
+    @expose('/flot')
+    def flot(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+
+        self._stubs()
+        self.name = "Flot Charts"
+        return render_template('sb-admin/pages/flot.html', admin_view=self)
+
+    @expose('/morris')
+    def morris(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+
+        self._stubs()
+        self.name = "Morris Charts"
+        return render_template('sb-admin/pages/morris.html', admin_view=self)
+
+    @expose('/tables')
+    def tables(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+
+        self._stubs()
+        self.name = "Tables"
+        return render_template('sb-admin/pages/tables.html', admin_view=self)
+
+    @expose('/forms')
+    def forms(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+
+        self._stubs()
+        self.name = "Forms"
+        return render_template('sb-admin/pages/forms.html', admin_view=self)
+
+    @expose('/ui/panelswells')
+    def panelswells(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+
+        self._stubs()
+        self.name = "Panels Wells"
+        return render_template('sb-admin/pages/ui/panels-wells.html', admin_view=self)
+
+    @expose('/ui/buttons')
+    def buttons(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+
+        self._stubs()
+        self.name = "Buttons"
+        return render_template('sb-admin/pages/ui/buttons.html', admin_view=self)
+
+    @expose('/ui/notifications')
+    def notifications(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+
+        self._stubs()
+        self.name = "Notifications"
+        return render_template('sb-admin/pages/ui/notifications.html', admin_view=self)
+
+    @expose('/ui/typography')
+    def typography(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+
+        self._stubs()
+        self.name = "Typography"
+        return render_template('sb-admin/pages/ui/typography.html', admin_view=self)
+
+    @expose('/ui/icons')
+    def icons(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+
+        self._stubs()
+        self.name = "Icons"
+        return render_template('sb-admin/pages/ui/icons.html', admin_view=self)
+
+    @expose('/ui/grid')
+    def grid(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+
+        self._stubs()
+        self.name = "Grid"
+        return render_template('sb-admin/pages/ui/grid.html', admin_view=self)
+
+
+class BlankView(admin.BaseView):
+    @expose('/')
+    def index(self):
+        return render_template('sb-admin/pages/blank.html', admin_view=self)

@@ -1,0 +1,515 @@
+import random
+import time
+import urllib.request
+import socket
+from builtins import str
+
+from .CryptManager import CryptManager
+from .models import ParkManagement, PropertyCompany, DiscountManagement, UserOrder
+from .models import SeqIndex
+from config.default import Config
+from .logger import *
+
+RESULT_ERROR = 0
+RESULT_SUCCESS = 1
+cm = CryptManager('voncytel')
+ISO_TIMEFORMAT = '%Y.%m.%d %H:%M'
+SUBING_TIMEFORMAT = '%d.%m.%Y %H:%M'
+
+from .retrying import retry
+import time as systemTime
+import hashlib
+import json
+STOP_MAX_ATTEMPT_NUMBER=30  #最大重试次数（貌似优先用的STOP_MAX_DELAY）
+STOP_MAX_DELAY=300000  # 最大响应时间总和300s
+WAIT_FIXED=10000  # 重试之间停留时间10s
+SEND_URL = 'http://139.129.128.71:8086/msgHttp/json/mt'
+ACCOUNT = 'xitu106'
+PASSWORD = 'xitu123456'
+
+
+class BarCode:
+    def sendNotifyToAdmin(phone,getContent):
+        logging.debug('phone----->'+str(phone))
+        timestamps = str(int(systemTime.time()) * 1000)
+        password = ''.join([PASSWORD, phone, timestamps])
+        password = hashlib.md5(password.encode('utf-8')).hexdigest()
+        content = getContent
+        content = content.encode('utf-8')
+        postdata = urllib.parse.urlencode(
+                {'account': ACCOUNT, 'password': password, 'mobile': phone, 'content': content,
+                 'timestamps': timestamps})
+        postdata = postdata.encode('utf-8')
+        res = urllib.request.urlopen(SEND_URL, postdata, timeout=Config.HTTP_TIMEOUT)
+        str_info = res.read().decode()
+        logging.debug('str_info----->'+str(str_info))
+        jsondata_info = json.loads(str_info)
+        isSend = False
+        for i in range(len(jsondata_info['Rets'])):
+            Rspcode = jsondata_info['Rets'][i]['Rspcode']
+            if Rspcode == 0:
+                isSend = True
+                break
+        if (isSend):
+            respData = {'code': 1}
+        else:
+            respData = {'code': 0}
+
+        return respData
+
+    sendException=None
+    getTicket=None
+    
+    def retry_if_urllib_error(exception):
+        BarCode.sendException=exception
+        logging.error('retry_if_urllib_error--------------'+str(BarCode.sendException))
+        return isinstance(exception, urllib.request.URLError)
+
+    def retry_if_result_valid(result):
+        logging.debug('result:' + result)
+        if result is not None and len(result) == 64:
+            return False
+        else:
+            return True
+
+    def after_attempts(attempt_number):
+        if attempt_number == 10:
+            logging.error('after_attempts--------------'+str(BarCode.sendException))
+
+            if BarCode.getTicket != None and BarCode.getTicket!='':
+                logging.error('getTicket--------------'+str(BarCode.getTicket))
+                parkId = BarCode.getTicket[0:4]
+                mParkManagement = ParkManagement.objects(park_id=parkId).first()
+                if mParkManagement and mParkManagement.telephone:
+                    logging.error('parkId--------------'+str(parkId))
+                    BarCode.sendNotifyToAdmin(mParkManagement.telephone,"【速宾】停车场服务器异常:"+str(BarCode.getTicket)+"已支付,支付成功消息未发送成功")
+
+
+    @retry(retry_on_result=retry_if_result_valid, after_attempts=after_attempts, wait_fixed=WAIT_FIXED,stop_max_attempt_number=STOP_MAX_ATTEMPT_NUMBER, stop_max_delay=STOP_MAX_DELAY)
+    def have_a_try(self, newUrl):
+        logging.debug('have_a_try--------------------')
+        result = ''
+        try:
+            result = urllib.request.urlopen(newUrl, timeout=Config.HTTP_TIMEOUT).read().decode(encoding='UTF-8')
+        except Exception as e:
+            logging.exception(e)
+        return result
+
+    def callService(self, ticket, amount, seq, isNeedSend):
+        getServer = "http://210.22.149.117"
+        try:
+            BarCode.getTicket=ticket
+            parkId = ticket[0:4]
+            mParkManagement = ParkManagement.objects(park_id=parkId).first()
+            if (mParkManagement != None):
+                getServer = mParkManagement.server
+            if (getServer == None or len(getServer) <= 10):
+                getServer = "http://210.22.149.117"
+        except Exception as e:
+            logging.exception("%s %s" % (ticket, e))
+            getServer = "http://210.22.149.117"
+        if amount > 0 or (amount <= 0 and isNeedSend == True):
+            oriRequestData = "Seq=" + str(self.getSeq()) + "&Request=TicketPayment&Ticket=" + str(ticket) + \
+                             "&Amount=" + str(amount)
+            parkRequestData = cm.encrypt(oriRequestData)
+            newUrl = getServer + "/2dbarcode?req=" + parkRequestData.decode(encoding='UTF-8')
+            logging.info(oriRequestData)
+            logging.info(newUrl)
+            try:
+                data = cm.decrypt(self.have_a_try(newUrl))
+                logging.info(data)
+                if (data.find("Error") >= 0):
+                    logging.error(data)
+                    respData = {'code': RESULT_ERROR, 'msg': data.split("Error=")[-1]}
+                    return respData
+            except Exception as e:
+                logging.exception("%s %s" % (ticket, e))
+        respData = {'code': RESULT_SUCCESS, 'msg': '支付回调成功'}
+        return respData
+
+    def callServiceByLpn(self, parkId, lpn, amount, seq, isNeedSend):
+        getServer = "http://210.22.149.117"
+        try:
+            mParkManagement = ParkManagement.objects(park_id=parkId).first()
+            if (mParkManagement != None):
+                getServer = mParkManagement.server
+            if (getServer == None or len(getServer) <= 10):
+                getServer = "http://210.22.149.117"
+        except Exception as e:
+            logging.exception("%s %s %s" % (parkId, lpn, e))
+            getServer = "http://210.22.149.117"
+        if amount > 0 or (amount <= 0 and isNeedSend == True):
+            oriRequestData = "Seq=" + str(self.getSeq()) + "&Request=TicketPayment&Ticket=P" + str(lpn) + \
+                             "&Amount=" + str(amount)
+            parkRequestData = cm.encrypt(oriRequestData)
+            newUrl = getServer + "/2dbarcode?req=" + parkRequestData.decode(encoding='UTF-8')
+            logging.info(oriRequestData)
+            logging.info(newUrl)
+            try:
+                data = cm.decrypt(self.have_a_try(newUrl))
+                logging.info(data)
+                if (data.find("Error") >= 0):
+                    logging.error(data)
+                    respData = {'code': RESULT_ERROR, 'msg': data.split("Error=")[-1]}
+                    return respData
+            except Exception as e:
+                logging.exception("%s %s %s" % (parkId, lpn, e))
+        respData = {'code': RESULT_SUCCESS, 'msg': '支付回调成功'}
+        return respData
+
+    def decryptCode(self, code):
+        # c=Subin&t=0653.0001.0218&s=嘉华
+        try:
+            newCode = cm.decrypt(code)
+            logging.debug(newCode)
+            newCode = newCode.split('&')
+            for myCode in newCode:
+                if (myCode.find('t') >= 0):
+                    id = myCode.split("=")[-1]
+                    payway = 0
+                    if (id.upper().startswith('P') == True):
+                        payway = 1
+                    else:
+                        id = id.replace('.', '')
+                    respData = {'code': RESULT_SUCCESS, 'id': id, 'payway': payway}
+                    return respData
+        except Exception as e:
+            logging.exception(e)
+        respData = {'code': RESULT_ERROR, 'msg': '二维码错误，请重新扫描'}
+        return respData
+
+    def decryptCodeToTicket(self, code):
+        # c=Subin&t=0653.0001.0218&s=嘉华
+        newCode = cm.decrypt(code)
+        newCode = newCode.split('&')
+        for myCode in newCode:
+            if (myCode.find('t') >= 0):
+                myTicket = myCode.split("=")[-1]
+                myTicket = myTicket.replace('.', '')
+                return myTicket
+
+        return ''
+
+    def getBarcode(self, ticket, appid, openId):
+        try:
+            ticket = ticket.replace('.', '')
+            if (len(ticket) == 10):
+                ticket1 = ticket[0:4]
+                ticket2 = ticket[4:7]
+                ticket3 = ticket[7:10]
+                newTicket = '0' + ticket3 + '.' + ticket1 + '.0' + ticket2 + '.00'
+                parkId = '0' + ticket3
+            elif (len(ticket) == 12):
+                ticket1 = ticket[0:4]
+                ticket2 = ticket[4:8]
+                ticket3 = ticket[8:12]
+                newTicket = ticket3 + '.' + ticket1 + '.' + ticket2 + '.00'
+                parkId = ticket3
+            else:
+                respData = {'code': RESULT_ERROR, 'msg': '停车票有误，请重新输入'}
+                return respData
+
+            # mUserOrder = UserOrder.objects(ticket=newTicket).first()
+            # if (mUserOrder != None and mUserOrder.isPaid == True):
+            #    respData = {'code': RESULT_ERROR, 'msg': '停车票已经支付，请尽快离场'}
+            #    return respData
+
+            ParkName = ""
+            getServer = "http://210.22.149.117"
+            note = ''
+            try:
+
+                mParkManagement = ParkManagement.objects(park_id=parkId).first()
+                if (mParkManagement != None):
+                    getServer = mParkManagement.server
+                    ParkName = mParkManagement.park_name
+                    note = mParkManagement.note
+                    if Config.SUPPORT_THIRD_PART:
+                        if appid:
+                            company = PropertyCompany.objects(wechat_appid=appid).first()
+                            if company != None:
+                                if mParkManagement.company != company:
+                                    # 停车券和物业公司不匹配
+                                    respData = {'code': RESULT_ERROR, 'msg': '停车券匹配错误，请重新输入'}
+                                    return respData
+                            else:
+                                # 没有找到物业公司
+                                respData = {'code': RESULT_ERROR, 'msg': '停车券匹配错误，请重新输入'}
+                                return respData
+
+
+                else:
+                    respData = {'code': RESULT_ERROR, 'msg': '没有该停车场，或者该停车场不支持微信支付'}
+                    return respData
+                if (getServer == None or len(getServer) <= 10):
+                    getServer = "http://210.22.149.117"
+            except Exception as e:
+                logging.exception(e)
+                getServer = "http://210.22.149.117"
+
+            oriRequestData = "Seq=" + self.getSeq() + "&Request=TicketPrice&Ticket=" + newTicket
+            parkRequestData = cm.encrypt(oriRequestData)
+            newUrl = getServer + "/2dbarcode?req=" + parkRequestData.decode(encoding='UTF-8')
+            logging.info(oriRequestData)
+            logging.info(newUrl)
+            data = cm.decrypt(urllib.request.urlopen(newUrl, timeout=Config.HTTP_TIMEOUT).read().decode(encoding='UTF-8'))
+            logging.info(data)
+            if (data.find("Error") >= 0):
+                msg = data.split("Error=")[-1]
+                if msg.find("Ticket not found"):
+                    msg = "车辆未找到，请确认后重试"
+                respData = {'code': RESULT_ERROR, 'msg': msg}
+                return respData
+
+            data = data.split('&')
+
+            for i in range(0, 7):
+                get_str = data[i]
+                if (get_str.startswith('Seq')):
+                    Seq = data[i].split('=')[1]
+                elif (get_str.startswith('Price')):
+                    Price = data[i].split('=')[1]
+                elif (get_str.startswith('Ticket')):
+                    Ticket = data[i].split('=')[1]
+                elif (get_str.startswith('Time')):
+                    Time = data[i].split('=')[1]
+                elif (get_str.startswith('Entry')):
+                    Entry = data[i].split('=')[1]
+                elif (get_str.startswith('PaymentNr')):
+                    PaymentNr = data[i].split('=')[1]
+                elif (get_str.startswith('Discount')):
+                    Discount = data[i].split('=')[1]
+
+            Time = float(Time) * 60
+            sec_time = float(self.formateSuBinTimeToSec(Entry))
+            sec_time += float(Time)
+            QuitTime = time.strftime(ISO_TIMEFORMAT, time.localtime(sec_time))
+            Entry = self.formateSuBinTime(Entry)
+            Discount = float(Discount)
+
+            # 折扣次数限制
+            if openId and float(Price) > 0:
+                usedTimes = 0
+                mUserOrderList = UserOrder.objects(pay_time__gte=datetime.date.today(),
+                                                   wechat_openId=openId, isPaid=True, discount__ne='0')
+                if (mUserOrderList):
+                    usedTimes = len(mUserOrderList)
+                logging.debug(usedTimes)
+                (pDiscount, reuseTimes) = self.getPlatformDiscount(parkId)
+                logging.debug(reuseTimes)
+                if(usedTimes < reuseTimes):
+                    Discount = float(Discount) + pDiscount
+
+            respData = {'code': RESULT_SUCCESS, 'Seq': Seq, 'Price': Price, 'Ticket': Ticket, 'Time': Time,
+                        'Entry': Entry, 'PaymentNr': PaymentNr, 'Discount': Discount, 'QuitTime': QuitTime,
+                        "ParkName": ParkName, 'note': note}
+            return respData
+        except urllib.error.HTTPError as e:
+            logging.exception("%s %s" % (ticket, e))
+            respData = {'code': RESULT_ERROR, 'msg': '服务器 HTTPError'}
+            return respData
+        except urllib.error.URLError as e:
+            logging.exception("%s %s" % (ticket, e))
+            respData = {'code': RESULT_ERROR, 'msg': '服务器 URLError'}
+            return respData
+        except socket.timeout as e:
+            logging.exception("%s %s" % (ticket, e))
+            respData = {'code': RESULT_ERROR, 'msg': '服务器请求超时, 请稍后再试'}
+        except Exception as e:
+            logging.exception("%s %s" % (ticket, e))
+            respData = {'code': RESULT_ERROR, 'msg': '服务器错误, 请稍后再试'}
+            return respData
+
+    def getBarcodeByLPN(self, lpn, appid, openId, parkId):
+        try:
+            logging.debug(lpn + parkId)
+            if (len(lpn) != 6):
+                respData = {'code': RESULT_ERROR, 'msg': '车牌号有误，请重新输入'}
+                return respData
+
+            # mUserOrder = UserOrder.objects(ticket=newTicket).first()
+            # if (mUserOrder != None and mUserOrder.isPaid == True):
+            #    respData = {'code': RESULT_ERROR, 'msg': '停车票已经支付，请尽快离场'}
+            #    return respData
+
+            ParkName = ""
+            getServer = "http://210.22.149.117"
+            note = ''
+            try:
+
+                mParkManagement = ParkManagement.objects(park_id=parkId).first()
+                if (mParkManagement != None):
+                    getServer = mParkManagement.server
+                    ParkName = mParkManagement.park_name
+                    note = mParkManagement.note
+                    if Config.SUPPORT_THIRD_PART:
+                        if appid:
+                            company = PropertyCompany.objects(wechat_appid=appid).first()
+                            if company != None:
+                                if mParkManagement.company != company:
+                                    # 停车券和物业公司不匹配
+                                    respData = {'code': RESULT_ERROR, 'msg': '停车券匹配错误，请重新输入'}
+                                    return respData
+                            else:
+                                # 没有找到物业公司
+                                respData = {'code': RESULT_ERROR, 'msg': '停车券匹配错误，请重新输入'}
+                                return respData
+
+
+                else:
+                    respData = {'code': RESULT_ERROR, 'msg': '没有该停车场，或者该停车场不支持微信支付'}
+                    return respData
+                if (getServer == None or len(getServer) <= 10):
+                    getServer = "http://210.22.149.117"
+            except Exception as e:
+                logging.exception(e)
+                getServer = "http://210.22.149.117"
+
+            oriRequestData = "Seq=" + self.getSeq() + "&Request=TicketPrice&Ticket=P" + lpn
+            parkRequestData = cm.encrypt(oriRequestData)
+            newUrl = getServer + "/2dbarcode?req=" + parkRequestData.decode(encoding='UTF-8')
+            logging.info(oriRequestData)
+            logging.info(newUrl)
+            data = cm.decrypt(urllib.request.urlopen(newUrl, timeout=Config.HTTP_TIMEOUT).read().decode(encoding='UTF-8'))
+            logging.info(data)
+            if (data.find("Error") >= 0):
+                msg = data.split("Error=")[-1]
+                if msg.find("Ticket not found"):
+                    msg = "车辆未找到，请确认后重试"
+                respData = {'code': RESULT_ERROR, 'msg': msg}
+                return respData
+
+            data = data.split('&')
+
+            for i in range(0, 7):
+                get_str = data[i]
+                if (get_str.startswith('Seq')):
+                    Seq = data[i].split('=')[1]
+                elif (get_str.startswith('Price')):
+                    Price = data[i].split('=')[1]
+                elif (get_str.startswith('Ticket')):
+                    lpn = data[i].split('=')[1][1:7]
+                elif (get_str.startswith('Time')):
+                    Time = data[i].split('=')[1]
+                elif (get_str.startswith('Entry')):
+                    Entry = data[i].split('=')[1]
+                elif (get_str.startswith('PaymentNr')):
+                    PaymentNr = data[i].split('=')[1]
+                elif (get_str.startswith('Discount')):
+                    Discount = data[i].split('=')[1]
+
+            Time = float(Time) * 60
+            sec_time = float(self.formateSuBinTimeToSec(Entry))
+            sec_time += float(Time)
+            QuitTime = time.strftime(ISO_TIMEFORMAT, time.localtime(sec_time))
+            Entry = self.formateSuBinTime(Entry)
+            Discount = float(Discount)
+
+            # 折扣次数限制
+            if openId and float(Price) > 0:
+                usedTimes = 0
+                mUserOrderList = UserOrder.objects(pay_time__gte=datetime.date.today(),
+                                                   wechat_openId=openId, isPaid=True, discount__ne='0')
+                if (mUserOrderList):
+                    usedTimes = len(mUserOrderList)
+                logging.debug(usedTimes)
+                (pDiscount, reuseTimes) = self.getPlatformDiscount(parkId)
+                logging.debug(reuseTimes)
+                if(usedTimes < reuseTimes):
+                    Discount = float(Discount) + pDiscount
+
+            respData = {'code': RESULT_SUCCESS, 'Seq': Seq, 'Price': Price, 'Lpn': lpn, 'Time': Time,
+                        'Entry': Entry, 'PaymentNr': PaymentNr, 'Discount': Discount, 'QuitTime': QuitTime,
+                        "ParkName": ParkName, 'note': note, 'parkId': parkId}
+            return respData
+        except urllib.error.HTTPError as e:
+            logging.exception("%s %s" % (lpn, e))
+            respData = {'code': RESULT_ERROR, 'msg': '服务器 HTTPError'}
+            return respData
+        except urllib.error.URLError as e:
+            logging.exception("%s %s" % (lpn, e))
+            respData = {'code': RESULT_ERROR, 'msg': '服务器 URLError'}
+            return respData
+        except socket.timeout as e:
+            logging.exception("%s %s" % (lpn, e))
+            respData = {'code': RESULT_ERROR, 'msg': '服务器请求超时, 请稍后再试'}
+        except Exception as e:
+            logging.exception("%s %s" % (lpn, e))
+            respData = {'code': RESULT_ERROR, 'msg': '服务器错误, 请稍后再试'}
+            return respData
+
+    def getPlatformDiscount(self, parkId):
+        weekday = self.getWeedayStr()
+        discount = 0.0
+        reuseTimes = 0
+        userDiscount = DiscountManagement.objects.filter(parks__contains=parkId).filter(week_day=weekday).first()
+        if(userDiscount):
+            reuseTimes = userDiscount.reuse_times
+            if(userDiscount.discount_type == '固定折扣'):
+                discount = userDiscount.fix_discount
+            elif(userDiscount.discount_type == '随机折扣'):
+                discount = random.randint(int(userDiscount.random_min), int(userDiscount.random_max))
+            if(discount):
+                discount = float(discount)
+        logging.info('platform discount:' + str(discount) + 'reuseTimes:' + str(reuseTimes))
+        reuseTimes = int(reuseTimes)
+        return (discount, reuseTimes)
+
+    def getWeedayStr(self):
+        weekdayStr = ''
+        dayOfWeek = datetime.datetime.today().weekday()
+        if(dayOfWeek == 0):
+            weekdayStr = '星期一'
+        elif(dayOfWeek == 1):
+            weekdayStr = '星期二'
+        elif (dayOfWeek == 2):
+            weekdayStr = '星期三'
+        elif (dayOfWeek == 3):
+            weekdayStr = '星期四'
+        elif (dayOfWeek == 4):
+            weekdayStr = '星期五'
+        elif (dayOfWeek == 5):
+            weekdayStr = '星期六'
+        elif (dayOfWeek == 6):
+            weekdayStr = '星期日'
+        return weekdayStr
+
+    def getSeqIndex(self, dayIndex):
+        mySeeqKey = 'seq'
+        mSeqIndex = SeqIndex.objects(key=mySeeqKey).first()
+        if (mSeqIndex != None):
+            logging.debug('mSeqIndex:' + mSeqIndex.value)
+            logging.debug('dayIndex:' + str(dayIndex))
+            if (mSeqIndex.value.startswith(str(dayIndex))):
+                mSeqIndex.update(key=mySeeqKey, value=str(int(mSeqIndex.value) + 1))
+            else:
+                mSeqIndex.update(key=mySeeqKey, value=str((dayIndex * 1000000 + 1)))
+        else:
+            mSeqIndex = SeqIndex(key=mySeeqKey, value=str((dayIndex * 1000000 + 1)))
+            mSeqIndex.save()
+        mSeqIndex = SeqIndex.objects(key=mySeeqKey).first()
+        return mSeqIndex.value
+
+    def getSeq(self):
+        curTime = datetime.datetime.now()
+        d1 = datetime.datetime(curTime.year, curTime.month, curTime.day)
+        d2 = datetime.datetime(2014, 1, 1)
+        index = (d1 - d2).days
+
+        index = self.getSeqIndex(index)
+        return str(index)
+
+    def formateSuBinTime(self, expire_time):
+        d = datetime.datetime.strptime(expire_time, SUBING_TIMEFORMAT)
+        time_sec_float = time.mktime(d.timetuple())
+        timeFormate = time.strftime(ISO_TIMEFORMAT, time.localtime(time_sec_float))
+        return str(timeFormate)
+
+    def formateSuBinTimeToSec(self, expire_time):
+        d = datetime.datetime.strptime(expire_time, SUBING_TIMEFORMAT)
+        time_sec_float = time.mktime(d.timetuple())
+        return time_sec_float
+
+    def getCurISOTime(self):
+        curtime = time.strftime(ISO_TIMEFORMAT, time.localtime(time.time()))
+        return str(curtime)

@@ -1,0 +1,164 @@
+# 物业公司
+
+# 可以用来处理HTTP超时，等需要重试的错误方法
+
+import requests
+from app.retrying import *
+from app.logger import *
+
+# def after_attempts(attempt_number):
+#     print(attempt_number)
+#     if attempt_number==1:
+#         print('xxxxx...')
+#
+# def retry_if_urllib_error(exception):
+#     print('$$$$' + str(exception))
+#     logging.error('retry_if_urllib_error--------------' + str(exception))
+#     return True
+#
+# def retry_if_result_valid(result):
+#     """Return True if we should retry (in this case when result is None), False otherwise"""
+#     print(result)
+#     return result is None
+#
+# # 重试次数
+# @retry(retry_on_result=retry_if_result_valid, after_attempts=after_attempts, wait_fixed=2000,
+#        stop_max_attempt_number=8, stop_max_delay=30000)
+# def get_response():
+#     r = requests.get('http://152403h75v.51mypc.cn')
+#     return r.content
+#
+# get_response()
+
+property_companies = [
+    {
+        'company_name'     : '上海嘉里中心物业',
+        'address'          : '上海南京西路1515号',
+        'post'             : '200040',
+        'contact'          : 'John',
+        'telephone'        : '18666777779',
+        'wechat_account'   : '',
+        'alipay_account'   : '',
+        'deposit_bank'     : '工商银行',
+        'bank_account_name': '',
+        'create_time'      : ''
+    },
+    {
+        'company_name'     : '上海麦德龙物业',
+        'address'          : '上海市浦东新区花木镇白杨路383号',
+        'post'             : '200039',
+        'contact'          : 'John',
+        'telephone'        : '18666777779',
+        'wechat_account'   : '',
+        'alipay_account'   : '',
+        'deposit_bank'     : '工商银行',
+        'bank_account_name': '',
+        'create_time'      : ''
+    }
+]
+
+parks = [
+    {
+        'park_id'  : '220',
+        'park_name': '上海静安嘉里中心',
+        'address'  : '南京西路1515号',
+        'company'  : '上海嘉里中心物业',
+        'server'   : '',
+        'telephone': '',
+        'contact'  : '',
+        'admin'    : ''
+    },
+    {
+        'park_id'  : '312',
+        'park_name': '上海浦东麦德龙',
+        'address'  : '上海市浦东新区花木镇白杨路383号',
+        'company'  : '上海麦德龙物业',
+        'server'   : '',
+        'telephone': '',
+        'contact'  : '',
+        'admin'    : ''
+    }
+]
+
+users = [
+    {
+        'wechat_id'    : '',
+        'wechat_openId': '',
+        'mobile'       : '',
+        'license_plate': '',
+        'verify_code'  : '',
+        'create_time'  : ''
+    },
+    {
+        'wechat_id'    : '',
+        'wechat_openId': '',
+        'mobile'       : '',
+        'license_plate': '',
+        'verify_code'  : '',
+        'create_time'  : ''
+    },
+]
+
+user_orders = [
+    {
+        'ticket'        : '',
+        'wechat_id'     : '',
+        'wechat_openId' : '',
+        'seq'           : '',
+        'license_plate' : '',
+        'time'          : '',
+        'entry'         : '',
+        'paymentNr'     : '',
+        'quit_time'     : '',
+        'discount'      : '',
+        'price'         : '',
+        'isPaid'        : '',
+        'chooseCouponId': '',
+        'ActualPrice'   : ''
+    }
+]
+
+user_coupon_models = [
+    {
+        'wechat_openId'  : '',
+        'coupon_id'      : '',
+        'park_name'      : '',
+        'coupon_name'    : '',
+        'coupon_status'  : '',
+        'coupon_price'   : '',
+        'coupon_validity': ''
+
+    }
+]
+
+coupon_managements = [
+    {
+        'name'           : '',
+        'coupon_id'      : '',
+        'worth'          : '',
+        'expiration_date': '',
+        'obtain_num'     : '',
+        'restrictType'   : '',
+        'amount'         : '',
+        'remainder'      : '',
+        'used'           : '',
+        'status'         : '',
+        'origin'         : '',
+        'coupon_status'  : ''
+    }
+]
+
+park_admins = [
+    {
+        'username'    : '',
+        'password'    : '',
+        'company'     : '',
+        'park'        : '',
+        'email'       : '',
+        'telephone'   : '',
+        'create_time' : '',
+        'roles'       : '',
+        'active'      : '',
+        'confirmed_at': ''
+    }
+]

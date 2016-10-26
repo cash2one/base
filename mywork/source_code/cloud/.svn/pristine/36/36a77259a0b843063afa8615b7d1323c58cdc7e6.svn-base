@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+    <title>停车缴费</title>
+    <script src="js/jquery.min.js"></script>
+    <script src="bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="https://res.wx.qq.com/open/js/jweixin-1.0.0.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/MyJSTools.js"></script>
+    <link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link type="text/css" href="css/ParkingCSS.css" rel="stylesheet"/>
+</head>
+<body class="html_body" onpageshow="checkData()">
+<div id="container">
+    <div id="content_body" class="cl">
+        <div style="margin:0 auto;text-align:center;margin-top: 10px;margin-bottom: 10px;">
+            <img id="biglogo" height="60px" hidden="hidden" style="margin-bottom: 20px;"/>
+            <h3 id="parkname" style="margin: 0px; font-size: 20px;">停车场</h3>
+            <h3 style="margin: 0px; font-size: 20px;">欢迎您</h3>
+        </div>
+
+        <hr style="height:3px;border:none;border-top:3px ridge grey;"/>
+
+        <p id="ParkingNumLabel" style="margin-top: 10px;margin-bottom: 0px;">停车票号/车牌号:</p>
+        <p id="ParkingNum" style="margin-top: 0px;"></p>
+
+        <p style="margin-top: 5px;margin-bottom: 0px;">进场时间:</p>
+        <p id="Entry" style="margin-top: 0px;"></p>
+
+        <p style="margin-top: 5px;margin-bottom: 0px;">缴费时间:</p>
+        <p id="PayTime" style="margin-top: 0px;"></p>
+
+        <div class="text" style="margin-top: 5px;margin-bottom: 0px;">
+            停车时长:<span id="Duration" span class="text" style=" text-align:center;">暂无</span>
+        </div>
+
+        <div class="text" style="margin-top: 5px;margin-bottom: 0px;">
+            停车费用:<span id="Cost" class="text" style=" text-align:center;">暂无</span>
+        </div>
+
+        <div id="div_Discount" class="text" style="margin-top: 5px;margin-bottom: 0px;">
+            优惠折扣:<span id="Discount" class="text" style=" text-align:center;">暂无</span>
+        </div>
+
+        <div class="text" style="margin-top: 5px;margin-bottom: 0px;">
+
+            <div class="dropdown" id="coupon_list">
+                卡券抵扣:
+                <button id="coupon_choose_button" class="btn btn-default dropdown-toggle" type="button"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" style="padding: 5px;">
+                    无<span style="margin-left: 5px;" class="caret"></span>
+                </button>
+                <ul id="coupon_list_ul" class="dropdown-menu" aria-labelledby="coupon_choose_button">
+                </ul>
+            </div>
+        </div>
+
+        <div class="text" style="margin-top: 5px;margin-bottom: 0px;color: #cf2a27;">
+            费用合计:<span id="ActualCost" class="text" style=" text-align:center;">0.00</span>
+        </div>
+
+
+        <div class="text" id='note' style="margin-top: 5px;margin-bottom: 0px;color: #cf2a27;">
+
+        </div>
+
+        <div style="margin:0 auto;text-align:center;margin-top: 20px;" class="cl">
+            <button id="pay_btn" type="button" class="btn btn-primary btn-lg"
+                    style="width: 100%;font-size: 18px;color: #ffffff;">微信支付
+            </button>
+			<button id="close_btn" type="button" class="btn btn-primary btn-lg"
+                    style="width: 100%;font-size: 18px;color: #ffffff;">返回主界面
+            </button>
+        </div>
+    </div>
+    <div id="footing" style="text-align:center;" class="cl">
+        Powered by: <img id="logo" src="img/logo.png" width="30" height="12"/> Copyright ©2016
+    </div>
+</div>
+
+</body>
+
+
+<script>
+	// 请求费用类型
+	var payway = window.localStorage.getItem('payway');
+	if(!payway)
+		payway = '0';
+	var parkId = window.localStorage.getItem('system');
+    var openId = window.localStorage.getItem(my_appid + "openId");
+	var thirdOpenId = window.localStorage.getItem("user");
+    var nickname = window.localStorage.getItem("nickname");
+	if(!nickname || nickname == null)
+		nickname = '';
+    var LocString = String(window.location.search.substr(1));
+
+    var coupon_list = document.getElementById("coupon_list");
+
+    var p_parking_num = document.getElementById("ParkingNum");
+    var p_entry = document.getElementById("Entry");
+    var p_paytime = document.getElementById("PayTime");
+    var p_duration = document.getElementById("Duration");
+    var p_cost = document.getElementById("Cost");
+    var p_actual_cost = document.getElementById("ActualCost");
+    var p_discount = document.getElementById("Discount")
+    var div_Discount = document.getElementById("div_Discount");
+	var close_btn=document.getElementById("close_btn");
+    var btn_pay = document.getElementById("pay_btn");
+
+    var get_Seq;
+    var get_Price;
+    var get_Ticket;
+	var get_Lpn;
+    var get_Time;
+    var get_Entry;
+    var get_PaymentNr;
+    var get_Discount;
+    var get_QuitTime;
+    var get_ParkName;
+    var get_ActualPrice;
+
+    var list_coupon = new Array();
+    var coupon_list_ul = document.getElementById("coupon_list_ul");
+    var coupon_choose_button = document.getElementById("coupon_choose_button")
+    var chooseName = "无";
+    var chooseId = "";
+
+    var InterValObj; //timer变量，控制时间
+    var count = 60 * 1; //间隔函数，1秒执行
+    var curCount = count;//当前剩余秒数
+
+
+    function checkData() {
+        if (window.localStorage.getItem("paysuccess") == "YES") {
+            window.localStorage.setItem("paysuccess","NO");
+            /*
+			btn_pay.setAttribute("disabled", "true");//屏蔽按钮
+			div_Discount.hidden = true;
+			btn_pay.style.display = "none";
+			close_btn.style.display = "block";
+			close_btn.removeAttribute("disabled");
+			wx.closeWindow();
+            return;
+			*/
+        }
+    }
+	
+	init();
+
+	document.getElementById("close_btn").onclick = function()
+ 	{
+ 		wx.closeWindow();
+ 	}
+    function init() {
+//		var title = window.localStorage.getItem("title");
+//		if (title != null && title.length >0)
+//		{
+//			document.title = title;
+//		}
+		// 替换按钮颜色和LOGO图标
+		var syscolor = window.localStorage.getItem('syscolor');
+		if(syscolor)
+		{
+			var btnNodes = document.querySelectorAll('.btn-primary');
+			if(btnNodes)
+			{
+				for(var i=0; i < btnNodes.length; i++)
+				{
+					if(btnNodes[i])
+					{
+						btnNodes[i].style.backgroundColor = syscolor;
+						btnNodes[i].style.borderColor = syscolor;
+					}
+				}
+			}
+		}
+		
+		if(syscolor == '#50c646')
+		{
+			if(LOGO_CUSTOMIZED)
+				document.getElementById('logo').src = "img/" + system + "_logo.png";
+			else
+				document.getElementById('logo').src = "img/logo2.png";
+		}
+
+		close_btn.style.display = "none";
+		close_btn.setAttribute("disabled", "true");
+        btn_pay.setAttribute("disabled", "true");//屏蔽按钮
+
+        /*var loginSuccess = window.localStorage.getItem("loginSuccess");
+        if (loginSuccess != null && loginSuccess == "true") {
+            coupon_list.hidden = false;
+        }
+        else {
+            coupon_list.hidden = true;
+        }*/
+
+
+        btn_pay.removeAttribute("disabled");//启用按钮
+        InterValObj = window.setInterval(SetRemainTime, 1000); //启动计时器，1秒执行一次
+
+        $.post(my_ip_address + "/weixin/get_token", {
+            'myurl': location.href.split('#')[0],
+            'appid': my_appid
+        }, function (data) {
+            data = eval("(" + data + ")");
+            wx.config({
+                debug: false,
+                appId: my_appid,
+                timestamp: data.timestamp,
+                nonceStr: data.noncestr,
+                signature: data.signature,
+                jsApiList: [
+                    'closeWindow',
+                    'scanQRCode',
+                    'chooseWXPay'
+                ]
+            });
+        });
+
+        setData();
+
+
+        var content_body = document.getElementById("content_body");
+        var footingHeight = document.getElementById("footing").offsetHeight;
+//        content_body.style.height = (window.innerHeight - footingHeight - content_body.getBoundingClientRect().top - 5) + "px";
+
+
+    }
+
+    //timer处理函数
+    function SetRemainTime() {
+        if (curCount == 0) {
+            window.clearInterval(InterValObj);//停止计时器
+        }
+        else {
+            curCount--;
+        }
+    }
+    ;
+
+    function setData() {
+        get_Seq = getQueryStr("Seq", "");
+        get_Price = getQueryStr("Price", "");
+        get_Ticket = getQueryStr("Ticket", "");
+		get_Lpn = getQueryStr("Lpn", "");
+        get_Time = getQueryStr("Time", "");
+        get_Entry = getQueryStr("Entry", "");
+        get_PaymentNr = getQueryStr("PaymentNr", "");
+        get_Discount = getQueryStr("Discount", "");
+        get_QuitTime = getQueryStr("QuitTime", "");
+//		get_ParkName 	= getQueryStr("ParkName", "");
+
+
+        if (get_Price <= 0) {
+            window.location.href = "ParkingPaySuccess.html?get_Seq=" + get_Seq + "&ticket=" + get_Ticket + "&lpn=" + get_Lpn;
+            return;
+        }
+
+        var parkname = document.getElementById("parkname");
+        parkname.innerText = window.localStorage.getItem('sendParkName');
+        var noteStr = window.localStorage.getItem('sendNote');
+        if (noteStr) {
+            var note = document.getElementById("note");
+            note.innerText = noteStr;
+        }
+        get_ActualPrice = get_Price - get_Discount;
+        get_ActualPrice = get_ActualPrice.toFixed(2);
+		if(get_ActualPrice < 0)
+			get_ActualPrice = 0;
+		
+		if(payway == '1'){
+			p_parking_num.innerText = get_Lpn;
+			ParkingNumLabel.innerText = "车牌号码：";
+		}
+		else{
+			ParkingNumLabel.innerText = "停车票号：";
+			var newTicker = get_Ticket.split(".");
+			try {
+				p_parking_num.innerText = newTicker[1] + "." + newTicker[2] + "." + newTicker[0];
+			} catch (e) {
+				//TODO handle the exception
+				p_parking_num.innerText = get_Ticket;
+			}
+		}
+		
+        p_entry.innerText = get_Entry;
+        p_paytime.innerText = get_QuitTime;
+        p_duration.innerText = formatSeconds(get_Time);
+        p_cost.innerText = get_Price;
+        p_discount.innerText = get_Discount;
+        if (get_Discount <= 0.00) {
+            div_Discount.hidden = true;
+        }
+        else {
+            div_Discount.hidden = false;
+        }
+        p_actual_cost.innerText = get_ActualPrice;
+
+        chooseName = "无";
+        coupon_choose_button.innerHTML = chooseName + "<span style='margin: 5px;' class='caret'></span>";
+
+        if (!coupon_list.hidden) {
+            //获取可用的优惠券列表oPOuMwpjAVX4WTWoWKv0ShcDWWP8
+            $.post(my_ip_address + "/user/get_user_coupon_use", {
+                'openId': openId,
+                "restrictType": 0,
+                "ticket": get_Ticket,
+				"lpn": get_Lpn,
+				"payway": payway,
+				"parkId": parkId,
+				"nr": get_PaymentNr
+            }, function (data) {
+                data = eval("(" + data + ")");
+                list_coupon[0] = {"coupon_id": "", "coupon_price": "0.0", "coupon_name": "无"};
+                if (data.code == RESULT_SUCCESS && data.coupon_list.length > 0) {
+                    for (var i = 0; i < data.coupon_list.length; i++) {
+                        var coupon_id = data.coupon_list[i].coupon_id;
+                        var coupon_price = data.coupon_list[i].coupon_price;
+                        var coupon_name = data.coupon_list[i].coupon_name;
+                        list_coupon[i + 1] = {
+                            "coupon_id": coupon_id,
+                            "coupon_price": coupon_price,
+                            "coupon_name": coupon_name
+                        };
+                    }
+                }
+
+                var priceTemp = 1000;
+                var indexTemp = -1;
+                for (var i = 0; i < list_coupon.length; i++) {
+                    var coupon_name = list_coupon[i].coupon_name;
+                    var myA = document.createElement("a");
+                    myA.innerHTML = coupon_name;
+                    var myLi = document.createElement("li");
+                    myLi.appendChild(myA);
+                    coupon_list_ul.appendChild(myLi);
+
+                    var price = get_Price - get_Discount - list_coupon[i].coupon_price;
+                    if (priceTemp > price && price >= 0) {
+                        priceTemp = price;
+                        indexTemp = i;
+                    }
+
+                    myA.onclick = function (e) {
+                        chooseName = e.target.innerHTML;
+                        coupon_choose_button.innerHTML = chooseName + "<span style='margin: 5px;' class='caret'></span>";
+                        var index = getChooseCouponDataIndex(chooseName);
+                        if (index >= 0) {
+                            chooseId = list_coupon[index].coupon_id;
+                            get_ActualPrice = get_Price - get_Discount - list_coupon[index].coupon_price;
+                            get_ActualPrice = get_ActualPrice <= 0 ? (0) : (get_ActualPrice);
+                            get_ActualPrice = get_ActualPrice.toFixed(2);
+                            p_actual_cost.innerText = get_ActualPrice;
+                        }
+                    }
+                }
+
+                if (indexTemp >= 0) {
+                    chooseName = list_coupon[indexTemp].coupon_name;
+                    coupon_choose_button.innerHTML = chooseName + "<span style='margin: 5px;' class='caret'></span>";
+                    chooseId = list_coupon[indexTemp].coupon_id;
+                    get_ActualPrice = get_Price - get_Discount - list_coupon[indexTemp].coupon_price;
+                    get_ActualPrice = get_ActualPrice <= 0 ? (0) : (get_ActualPrice);
+                    get_ActualPrice = get_ActualPrice.toFixed(2);
+                    p_actual_cost.innerText = get_ActualPrice;
+                }
+            });
+        }
+
+
+        var biglogo = document.getElementById("biglogo");
+        biglogo.hidden = false;
+		if(parkId && parkId != null && parkId.length > 0){
+			biglogo.src = my_ip_address + "/logo/" + parkId;
+		}
+		else{
+			biglogo.src = my_ip_address + "/image/" + get_Ticket;
+		}
+//		biglogo.src = "http://192.168.1.153:5000/image/0218.1221.1223";
+    }
+    ;
+    function getChooseCouponDataIndex(name) {
+        for (var i = 0; i < list_coupon.length; i++) {
+            if (list_coupon[i].coupon_name == name) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    wx.error(function (res) {
+        alert(res.errMsg);
+    });
+    wx.ready(function () {
+        btn_pay.removeAttribute("disabled");//启用按钮
+        btn_pay.onclick = function () {
+
+            if (curCount <= 0) {
+                alert("订单超时，请重新扫描");
+            }
+            else {
+                btn_pay.setAttribute("disabled", "true");//屏蔽按钮
+
+                $.post(my_ip_address + "/wechat/wechatPay",
+                        {
+                            'Seq': get_Seq, 'Price': get_Price, 'Ticket': get_Ticket, 'lpn': get_Lpn, 'parkId': parkId, 'payway': payway,
+                            'Time': get_Time, 'Entry': get_Entry, 'PaymentNr': get_PaymentNr,
+                            'Discount': get_Discount, 'QuitTime': get_QuitTime, 'openId': openId, 'nickName': nickname,
+                            'ActualPrice': get_ActualPrice, "chooseCouponId": chooseId, 'appid': my_appid, 'thirdOpenId' : thirdOpenId
+                        },
+                        function (data) {
+
+
+                            data = eval("(" + data + ")");
+
+                            if (data.code == 2)//直接支付成功,跳转完成页面
+                            {
+                                window.location.href = "ParkingPaySuccess.html?get_Seq=" + get_Seq + "&ticket=" + get_Ticket + "&getbill=False";
+                                btn_pay.removeAttribute("disabled");//启用按钮
+                            }
+                            else if (data.code == 1) {
+
+                                wx.chooseWXPay({
+                                    timestamp: data.timeStamp,
+                                    nonceStr: data.nonceStr,
+                                    package: data.package,
+                                    signType: data.signType,
+                                    paySign: data.paySign,
+                                    success: function (res) {
+                                        window.localStorage.setItem("paysuccess", "YES");
+//						      	$.post(my_ip_address+"/wechat/wechatPaySuccess", {'Ticket' : get_Ticket , 'openId' : openId,"chooseCouponId":chooseId}, function(data) {});
+                                        window.location.href = "ParkingPaySuccess.html?get_Seq=" + get_Seq + "&ticket=" + get_Ticket;
+                                        
+                                    },
+                                    cancel: function () {
+                                        btn_pay.removeAttribute("disabled");//启用按钮
+                                        //			              	$.post(my_ip_address+"/wechat/wechatPaySuccess", {'Ticket' : get_Ticket , 'openId' : openId,"chooseCouponId":chooseId}, function(data) {});
+                                    },
+                                    error: function (e) {
+                                        //alert("支付失败，"+e);
+                                        alert("您支付未成功，请查询后再试");
+                                        btn_pay.removeAttribute("disabled");//启用按钮
+                                    }
+                                });
+                            }
+                            else {
+                                alert("您支付未成功，请查询后再试");
+                                btn_pay.removeAttribute("disabled");//启用按钮
+                            }
+
+
+                        });
+            }
+
+        };
+    });
+
+
+    function formatSeconds(value) {
+        var theTime = parseInt(value);// 秒
+        var theTime1 = 0;// 分
+        var theTime2 = 0;// 小时
+        if (theTime > 60) {
+            theTime1 = parseInt(theTime / 60);
+            theTime = parseInt(theTime % 60);
+            if (theTime1 > 60) {
+                theTime2 = parseInt(theTime1 / 60);
+                theTime1 = parseInt(theTime1 % 60);
+            }
+        }
+        var result = "";
+        //var result = ""+parseInt(theTime)+"秒";
+        if (theTime1 > 0) {
+            result = "" + parseInt(theTime1) + "分钟" + result;
+        }
+        if (theTime2 > 0) {
+            result = "" + parseInt(theTime2) + "小时" + result;
+        }
+        else {
+            result = "0小时" + result;
+        }
+        return result;
+    }
+
+
+</script>

@@ -1,0 +1,5 @@
+from .models import *
+
+def get_daily_users():
+    daily_users = User.objects.filter(create_time__gte=datetime.date.today()).count()
+    return daily_users

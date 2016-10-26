@@ -1,0 +1,25 @@
+Thu, 13 Oct 2016 13:44:47 threadpool.py[line:52 thread:140735183765504] INFO Started thread pool with 0 core threads and 20 maximum threads
+Thu, 13 Oct 2016 13:44:47 scheduler.py[line:287 thread:140735183765504] INFO Adding job tentatively -- it will be properly scheduled when the scheduler starts
+Thu, 13 Oct 2016 13:44:48 ftp_helper.py[line:25 thread:140735183765504] DEBUG 220 Welcome !
+Thu, 13 Oct 2016 13:44:48 csv_exporter.py[line:48 thread:140735183765504] ERROR 550 Filename invalid
+Traceback (most recent call last):
+  File "/Users/jia/mywork/dump/SubinTaskService/csv_exporter.py", line 45, in _export
+    ftp.put_file('file/' + csv, ftp_path) #
+  File "/Users/jia/mywork/dump/SubinTaskService/ftp_helper.py", line 92, in put_file
+    self.conn.storbinary('STOR %s' % ftp_path, file_handler)
+  File "/usr/local/Homebrew/Cellar/python3/3.5.2_1/Frameworks/Python.framework/Versions/3.5/lib/python3.5/ftplib.py", line 503, in storbinary
+    with self.transfercmd(cmd, rest) as conn:
+  File "/usr/local/Homebrew/Cellar/python3/3.5.2_1/Frameworks/Python.framework/Versions/3.5/lib/python3.5/ftplib.py", line 398, in transfercmd
+    return self.ntransfercmd(cmd, rest)[0]
+  File "/usr/local/Homebrew/Cellar/python3/3.5.2_1/Frameworks/Python.framework/Versions/3.5/lib/python3.5/ftplib.py", line 382, in ntransfercmd
+    resp = self.sendcmd(cmd)
+  File "/usr/local/Homebrew/Cellar/python3/3.5.2_1/Frameworks/Python.framework/Versions/3.5/lib/python3.5/ftplib.py", line 272, in sendcmd
+    return self.getresp()
+  File "/usr/local/Homebrew/Cellar/python3/3.5.2_1/Frameworks/Python.framework/Versions/3.5/lib/python3.5/ftplib.py", line 245, in getresp
+    raise error_perm(resp)
+ftplib.error_perm: 550 Filename invalid
+Thu, 13 Oct 2016 13:44:48 scheduler.py[line:262 thread:140735183765504] INFO Added job "_timer_export (trigger: interval[1 day, 0:00:00], next run at: 2016-10-13 16:43:00)" to job store "default"
+Thu, 13 Oct 2016 13:44:48 scheduler.py[line:574 thread:123145307557888] INFO Scheduler started
+Thu, 13 Oct 2016 13:44:48 scheduler.py[line:579 thread:123145307557888] DEBUG Looking for jobs to run
+Thu, 13 Oct 2016 13:44:48 scheduler.py[line:588 thread:123145307557888] DEBUG Next wakeup is due at 2016-10-13 16:43:00 (in 10691.776777 seconds)
+Thu, 13 Oct 2016 13:45:08 threadpool.py[line:111 thread:140735183765504] INFO Shutting down thread pool

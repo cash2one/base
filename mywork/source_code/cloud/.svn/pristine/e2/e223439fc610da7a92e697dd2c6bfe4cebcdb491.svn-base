@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+		<title>缴费记录</title>
+		<script src="js/config.js"></script>
+		<script src="js/jquery.min.js"></script>
+		<script src="bootstrap/dist/js/bootstrap.min.js"></script>
+		<link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link type="text/css" href="css/ParkingCSS.css" rel="stylesheet" />
+	</head>
+	<body class="html_body">
+		<div id = "contenter">
+			<div id="content_body" >
+				<div id="histroy_list" class="list-group">
+				  <!--<a  class="list-group-item" style="margin: 10px;background-color: #6fa8dc;">
+				    <h4 class="list-group-item-heading">List group item heading</h4>
+				    <p class="list-group-item-text">内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1内容1</p>
+				  </a>
+				  
+				  <a class="list-group-item" style="margin: 10px;">
+				    <h4 class="list-group-item-heading">List group item heading2</h4>
+				    <p class="list-group-item-text">内容3</p>
+				    <p class="list-group-item-text">内容4</p>
+				  </a>-->
+				</div>
+				
+				<div id="no_data" style="text-align: center; width: auto;">
+					<p style="margin: 100px;">无缴费记录</p>
+				</div>
+			</div>
+			<div id="footing" style="text-align:center;">
+				 Powered by: <img id="logo" src="img/logo.png" width="30" height="12" /> Copyright ©2016
+			</div>
+		</div>
+		
+	</body>
+</html>
+
+
+<script type="text/javascript">
+	
+	var no_data = document.getElementById("no_data");
+	var histroy_list = document.getElementById("histroy_list");
+	var openId = window.localStorage.getItem(my_appid+"openId");
+	init();
+	function init()
+	{
+// 		var title = window.localStorage.getItem("title");
+//		if (title != null && title.length >0)
+//		{
+//			document.title = title;
+//		}
+		
+		// 替换按钮颜色和LOGO图标
+		var syscolor = window.localStorage.getItem('syscolor');
+		if(syscolor)
+		{
+			var btnNodes = document.querySelectorAll('.btn-primary');
+			if(btnNodes)
+			{
+				for(var i=0; i < btnNodes.length; i++)
+				{
+					if(btnNodes[i])
+					{
+						btnNodes[i].style.backgroundColor = syscolor;
+						btnNodes[i].style.borderColor = syscolor;
+					}
+				}
+			}
+		}
+		
+		if(syscolor == '#50c646')
+		{
+			if(LOGO_CUSTOMIZED)
+				document.getElementById('logo').src = "img/" + system + "_logo.png";
+			else
+				document.getElementById('logo').src = "img/logo2.png";
+		}
+		
+		
+		no_data.hidden = true;
+		histroy_list.hidden = false;
+		
+		baseLineSet ();
+		
+		$.post(my_ip_address+"/user/get_user_park_histroy",{'openId' :openId},function(data)
+		{
+			
+			data=eval("("+data+")");
+			
+			var childs=histroy_list.childNodes;    
+			for(var i=childs.length-1;i>=0;i--){    
+				histroy_list.removeChild(childs.item(i));    
+			} 
+			if (data.code == RESULT_SUCCESS && data.histroy_list.length > 0)
+			{
+//				var add_html = "";
+//				for (var i = 0 ; i < data.histroy_list.length; i ++)
+				for (var i = data.histroy_list.length-1 ; i >= 0; i --)	
+				{
+					var parkName = data.histroy_list[i].parkName;
+					var parkTime = data.histroy_list[i].parkTimeEntry +" ~ " + data.histroy_list[i].parkTimeQuit;
+					var parkDuration = formatSeconds(data.histroy_list[i].parkDuration);
+					var parkCost = data.histroy_list[i].parkCost;
+					var parkDiscount = data.histroy_list[i].parkDiscount;
+					var seq = data.histroy_list[i].seq;
+					var isInvoice = data.histroy_list[i].isInvoice;
+					var seq = data.histroy_list[i].seq;
+//					var html =  "<a class='list-group-item' style='margin: 10px;background-color: #6fa8dc;'>" +
+//								"<p class='list-group-item-text' style = 'color: #ffffff;'>车场：" + parkName + "</p>" +
+//								"<p class='list-group-item-text' style = 'color: #ffffff;'>时间：" + parkTime + "</p>" +
+//								"<p class='list-group-item-text' style = 'color: #ffffff;'>计时：" + parkDuration + "</p>" +
+//								"<p class='list-group-item-text' style = 'color: #ffffff;'>计费：" + parkCost + "</p>" +
+//								"<p class='list-group-item-text' style = 'color: #ffffff;'>优惠：" + parkDiscount + "</p> </a>";
+//					add_html += html;
+					
+					addHistroy (seq, parkName, parkTime, parkDuration, parkCost, parkDiscount,seq,isInvoice);
+				}
+				
+//				histroy_list.innerHTML = add_html;
+				
+				no_data.hidden = true;
+				histroy_list.hidden = false;
+			}
+			else 
+			{
+				no_data.hidden = false;
+				histroy_list.hidden = true;
+			}
+			baseLineSet ();
+		});
+	}
+	
+	function addHistroy (seq,parkName, parkTime, parkDuration, parkCost, parkDiscount, seq, isInvoice)
+	{
+		
+		
+		var listGroupItem = document.createElement("a");
+		listGroupItem.classname = "list-group-item";
+		listGroupItem.style.margin = "10px";
+		
+		var div = document.createElement("div");
+		div.style.height = "135px";
+		div.style.padding = "5px";
+		div.style.width = (histroy_list.offsetWidth)+"px";
+		div.style.backgroundColor = "#0071a8da";
+		div.style.borderRadius = "5px";
+		div.style.borderColor = "#71a8da";
+		div.style.border = "1px solid";
+		
+		var seqItem = document.createElement("p");
+		seqItem.classname = "list-group-item-text";
+		seqItem.style.color = "#71a8da";
+		seqItem.style.margin = "0px";
+		seqItem.style.padding = "0px";
+		seqItem.innerText = "订单：" + seq;
+		
+		var parkNameItem = document.createElement("p");
+		parkNameItem.classname = "list-group-item-text";
+		parkNameItem.style.color = "#71a8da";
+		parkNameItem.style.margin = "0px";
+		parkNameItem.style.padding = "0px";
+		parkNameItem.innerText = "车场：" + parkName;
+		
+		var parkTimeItem = document.createElement("p");
+		parkTimeItem.classname = "list-group-item-text";
+		parkTimeItem.style.color = "#71a8da";
+		parkTimeItem.style.margin = "0px";
+		parkTimeItem.style.padding = "0px";
+		parkTimeItem.innerText = "时间：" + parkTime;
+		
+		var parkDurationItem = document.createElement("p");
+		parkDurationItem.classname = "list-group-item-text";
+		parkDurationItem.style.color = "#71a8da";
+		parkDurationItem.style.margin = "0px";
+		parkDurationItem.style.padding = "0px";
+		parkDurationItem.innerText = "计时：" + parkDuration;
+		
+		var parkCostItem = document.createElement("p");
+		parkCostItem.classname = "list-group-item-text";
+		parkCostItem.style.color = "#71a8da";
+		parkCostItem.style.margin = "0px";
+		parkCostItem.style.padding = "0px";
+		parkCostItem.innerText = "计费：" + parkCost;
+		
+		var parkDiscountItem = document.createElement("p");
+		parkDiscountItem.classname = "list-group-item-text";
+		parkDiscountItem.style.color = "#6fa8dc";
+		parkDiscountItem.style.margin = "0px";
+		parkDiscountItem.style.padding = "0px";
+		parkDiscountItem.innerText = "优惠：" + parkDiscount;
+		
+		var leftDiv = document.createElement("div");
+		leftDiv.style.float = "left";
+		leftDiv.appendChild(parkDiscountItem);
+		
+		var rightDiv = document.createElement("div");
+		rightDiv.style.float = "right";
+		
+		
+		var test = "索取发票";
+		if (isInvoice == "False")
+		{
+			test = "申领发票";
+		}
+		else
+		{
+			test = "已领发票";
+		}
+		
+		var buttonItem = document.createElement("button");
+		buttonItem.innerText = test;
+		buttonItem.style.borderColor = "#71a8da";
+		buttonItem.style.border = "1px solid";
+		buttonItem.style.backgroundColor = "#0071a8da";
+		buttonItem.style.borderRadius = "5px";
+		if(parseFloat(parkCost) - parseFloat(parkDiscount) > 0){
+			rightDiv.appendChild(buttonItem);
+		}
+		
+		var appenDiv  = document.createElement("div");
+		appenDiv.style.float = "none";
+		
+		appenDiv.appendChild(leftDiv);
+		appenDiv.appendChild(rightDiv);
+		
+		div.appendChild(seqItem);
+		div.appendChild(parkNameItem);
+		div.appendChild(parkTimeItem);
+		div.appendChild(parkDurationItem);
+		div.appendChild(parkCostItem);
+//		div.appendChild(parkDiscountItem);
+		div.appendChild(appenDiv);
+		listGroupItem.appendChild(div);
+		histroy_list.appendChild(listGroupItem);
+		
+		
+		var cost = 0;
+		try{
+			cost = parseFloat(parkCost)
+		}catch(e){
+			//TODO handle the exception
+		}
+		
+		if (cost > 0)
+		{
+			buttonItem.hidden = false;
+			if(cost - parseFloat(parkDiscount) > 0){
+				div.onclick = function()
+				{
+					if (isInvoice == "False")
+					{
+						window.location.href = "ParkingGetBill.html?get_Seq="+seq+"&from=histroy";
+					}
+					else
+					{
+						window.location.href = "ParkingGetBillDuplicate.html?get_Seq="+seq;
+					}
+				};
+			}
+		}
+		else 
+		{
+			buttonItem.hidden = true;
+		}
+		
+		
+	}
+	
+	function baseLineSet ()
+	{
+		var content_body = document.getElementById("content_body");
+		var footingHeight = document.getElementById("footing").offsetHeight;
+		var height = histroy_list.getBoundingClientRect().top + histroy_list.scrollHeight + no_data.offsetHeight;
+		if (height > window.innerHeight)
+		{
+			content_body.style.height = "auto";
+		}
+		else 
+		{
+		   	content_body.style.height=(window.innerHeight - footingHeight - content_body.getBoundingClientRect().top)+"px";
+		}
+	}
+	
+	function formatSeconds(value) 
+	{
+	    var theTime = parseInt(value);// 秒
+	    var theTime1 = 0;// 分
+	    var theTime2 = 0;// 小时
+	    if(theTime > 60) 
+	    {
+	        theTime1 = parseInt(theTime/60);
+	        theTime = parseInt(theTime%60);
+	        if(theTime1 > 60) 
+	        {
+	            theTime2 = parseInt(theTime1/60);
+	            theTime1 = parseInt(theTime1%60);
+	        }
+	    }
+	    var result = "";
+	    //var result = ""+parseInt(theTime)+"秒";
+	    if(theTime1 > 0) {
+	        result = ""+parseInt(theTime1)+"分钟"+result;
+	    }
+	    if(theTime2 > 0) {
+	        result = ""+parseInt(theTime2)+"小时"+result;
+	    }
+	    else 
+	    {
+	    		result = "0小时"+result;
+	    }
+	    return result;
+	}
+	
+</script>

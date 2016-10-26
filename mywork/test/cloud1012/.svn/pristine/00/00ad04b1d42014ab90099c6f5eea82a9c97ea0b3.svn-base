@@ -1,0 +1,67 @@
+0000000000000000000000000000000000000000 e0c2c7b70a5a90fe6137f2f03a0217fe8b2674c5 root <root@iZ11nuvpfdgZ.(none)> 1458901831 +0800	clone: from http://zeng.shan@stash.hongfu001.com:7990/scm/park/parkserver.git
+e0c2c7b70a5a90fe6137f2f03a0217fe8b2674c5 9e29e985fda0aaa6f011b4b73b67b1fb6aec5abd root <root@iZ11nuvpfdgZ.(none)> 1459156786 +0800	pull: Fast-forward
+9e29e985fda0aaa6f011b4b73b67b1fb6aec5abd 7c5ee216dcd1e41bc793321c380bccf49808246a root <root@iZ11nuvpfdgZ.(none)> 1460444384 +0800	pull: Fast-forward
+7c5ee216dcd1e41bc793321c380bccf49808246a cf1e81ceab2c3cc5078e93f88a411dd6558bf6ce root <root@iZ11nuvpfdgZ.(none)> 1460528266 +0800	pull: Fast-forward
+cf1e81ceab2c3cc5078e93f88a411dd6558bf6ce 717f77156dbde9bbec0cc5be2575b3ebb5d6b018 root <root@iZ11nuvpfdgZ.(none)> 1460691776 +0800	pull: Fast-forward
+717f77156dbde9bbec0cc5be2575b3ebb5d6b018 d45845b2b4501aeb8fa679ba265fed8a1d0dfadf root <root@iZ11nuvpfdgZ.(none)> 1460702027 +0800	pull: Fast-forward
+d45845b2b4501aeb8fa679ba265fed8a1d0dfadf f67784e1f9267c84d0bcb4ec4401687bccfad35b root <root@iZ11nuvpfdgZ.(none)> 1461293390 +0800	pull: Fast-forward
+f67784e1f9267c84d0bcb4ec4401687bccfad35b 41813da767e7f448bd3be5d453f4ef480de1cc26 root <root@iZ11nuvpfdgZ.(none)> 1461295583 +0800	pull: Fast-forward
+41813da767e7f448bd3be5d453f4ef480de1cc26 665dce67907f441959cc8abaf22260bdc79be392 root <root@iZ11nuvpfdgZ.(none)> 1461302304 +0800	pull: Fast-forward
+665dce67907f441959cc8abaf22260bdc79be392 b0c9c39ce65c4ba616c366ef932fdcd61e7bd006 root <root@iZ11nuvpfdgZ.(none)> 1461313019 +0800	pull: Fast-forward
+b0c9c39ce65c4ba616c366ef932fdcd61e7bd006 a69d1a85e187d73df21a6ead1a47bb4c9b86495c root <root@iZ11nuvpfdgZ.(none)> 1461662902 +0800	pull: Fast-forward
+a69d1a85e187d73df21a6ead1a47bb4c9b86495c 2e48d73cdb3672539dd0f43492e8b7afc2d9bfd6 root <root@iZ11nuvpfdgZ.(none)> 1461664190 +0800	pull: Fast-forward
+2e48d73cdb3672539dd0f43492e8b7afc2d9bfd6 275bb7e9c3cb90d530c9b7dd15c6139f236ae341 root <root@iZ11nuvpfdgZ.(none)> 1461673782 +0800	pull: Fast-forward
+275bb7e9c3cb90d530c9b7dd15c6139f236ae341 b2db6c704670c2839b1332fc8dc241e878604d16 root <root@iZ11nuvpfdgZ.(none)> 1461721088 +0800	pull: Fast-forward
+b2db6c704670c2839b1332fc8dc241e878604d16 aa744d08dbf8d121836f366550e43fa5572d18a3 root <root@iZ11nuvpfdgZ.(none)> 1461750550 +0800	pull: Fast-forward
+aa744d08dbf8d121836f366550e43fa5572d18a3 16846c75b1136e6befb190f96e39df0a57339a1e root <root@iZ11nuvpfdgZ.(none)> 1462264006 +0800	pull: Fast-forward
+16846c75b1136e6befb190f96e39df0a57339a1e 47cc30b0d848189f5e1d4ab0f65b0f21a7453da7 root <root@iZ11nuvpfdgZ.(none)> 1462267208 +0800	pull: Fast-forward
+47cc30b0d848189f5e1d4ab0f65b0f21a7453da7 d7f62a3a4e73f071245b5bc85416276190d64ac7 root <root@iZ11nuvpfdgZ.(none)> 1462269019 +0800	reset: moving to d7f62a3a4e73f071245b5bc85416276190d64ac7
+d7f62a3a4e73f071245b5bc85416276190d64ac7 aa744d08dbf8d121836f366550e43fa5572d18a3 root <root@iZ11nuvpfdgZ.(none)> 1462269281 +0800	reset: moving to aa744d08dbf8d121836f366550e43fa5572d18a3
+aa744d08dbf8d121836f366550e43fa5572d18a3 6a36b4c500c91222098ff9bbc716fa1dddabb2e9 root <root@iZ11nuvpfdgZ.(none)> 1462346081 +0800	pull: Fast-forward
+6a36b4c500c91222098ff9bbc716fa1dddabb2e9 eed6bd22b6098ea98e88e48d15211f2e52a97dad root <root@iZ11nuvpfdgZ.(none)> 1462346581 +0800	pull: Fast-forward
+eed6bd22b6098ea98e88e48d15211f2e52a97dad bcf0256ac67eb106aeb991aabed924bb92e76c94 root <root@iZ11nuvpfdgZ.(none)> 1462425736 +0800	pull: Fast-forward
+bcf0256ac67eb106aeb991aabed924bb92e76c94 5f6bcef13271fd6310df65485c6401cf3443dcbf root <root@iZ11nuvpfdgZ.(none)> 1462530058 +0800	pull: Fast-forward
+5f6bcef13271fd6310df65485c6401cf3443dcbf 8192f143f09c1ae87028676dea9ad69c5f44ba2e root <root@iZ11nuvpfdgZ.(none)> 1462531912 +0800	pull: Fast-forward
+8192f143f09c1ae87028676dea9ad69c5f44ba2e a8ce4305e79bdbe619659e32a99aedc3e94a8be8 root <root@iZ11nuvpfdgZ.(none)> 1462533240 +0800	pull: Fast-forward
+a8ce4305e79bdbe619659e32a99aedc3e94a8be8 cf3e245241ab44ff1131fb598bc7882e622618a7 root <root@iZ11nuvpfdgZ.(none)> 1462533467 +0800	pull: Fast-forward
+cf3e245241ab44ff1131fb598bc7882e622618a7 86b7615404a8e7d9ed07e785e845fb16b837f267 root <root@iZ11nuvpfdgZ.(none)> 1462533809 +0800	pull: Fast-forward
+86b7615404a8e7d9ed07e785e845fb16b837f267 c10d9b2aecd91b850b8118f6986ed5e2b0658efb root <root@iZ11nuvpfdgZ.(none)> 1462534008 +0800	pull: Fast-forward
+c10d9b2aecd91b850b8118f6986ed5e2b0658efb a86959b2afe7775f7dd446a60b1140c17d0a9d47 root <root@iZ11nuvpfdgZ.(none)> 1462535162 +0800	pull: Fast-forward
+a86959b2afe7775f7dd446a60b1140c17d0a9d47 dda455c808b659175c8ba914788811a731159534 root <root@iZ11nuvpfdgZ.(none)> 1462864136 +0800	pull: Fast-forward
+dda455c808b659175c8ba914788811a731159534 aeacad6842aaf7bd34bccd0e1d95d29ae734daf1 root <root@iZ11nuvpfdgZ.(none)> 1462881464 +0800	pull: Fast-forward
+aeacad6842aaf7bd34bccd0e1d95d29ae734daf1 5a806214d046cecf69c8154f24d068c75ab9b9ee root <root@iZ11nuvpfdgZ.(none)> 1462882811 +0800	pull: Fast-forward
+5a806214d046cecf69c8154f24d068c75ab9b9ee a88730b5d82d1d4635c35cdb43328a6abb78fec0 root <root@iZ11nuvpfdgZ.(none)> 1462935760 +0800	pull: Fast-forward
+a88730b5d82d1d4635c35cdb43328a6abb78fec0 88de06f79f81cb817c7c8ae222f8992823bfe286 root <root@iZ11nuvpfdgZ.(none)> 1462937070 +0800	pull: Fast-forward
+88de06f79f81cb817c7c8ae222f8992823bfe286 e38a66d0661730dac3779b43760bb6cb0dcbef90 root <root@iZ11nuvpfdgZ.(none)> 1462938440 +0800	pull: Fast-forward
+e38a66d0661730dac3779b43760bb6cb0dcbef90 b865ca2c0f4747fbacb10e8440bc2201a1c5bed4 root <root@iZ11nuvpfdgZ.(none)> 1462939421 +0800	pull: Fast-forward
+b865ca2c0f4747fbacb10e8440bc2201a1c5bed4 a06fb9535572826a7cda1a9c2ca14a3f8e040e02 root <root@iZ11nuvpfdgZ.(none)> 1462939707 +0800	pull: Fast-forward
+a06fb9535572826a7cda1a9c2ca14a3f8e040e02 af3d306e0c13d1b9d2469087b35ce8f184bf6e26 root <root@iZ11nuvpfdgZ.(none)> 1462953692 +0800	pull: Fast-forward
+af3d306e0c13d1b9d2469087b35ce8f184bf6e26 62c599abd295a4d5bd8e6360939c505f90a634ac root <root@iZ11nuvpfdgZ.(none)> 1463046581 +0800	pull: Fast-forward
+62c599abd295a4d5bd8e6360939c505f90a634ac 83b70254ae319d4dc123f4547c24ccc4a9c78504 root <root@iZ11nuvpfdgZ.(none)> 1463057527 +0800	pull: Fast-forward
+83b70254ae319d4dc123f4547c24ccc4a9c78504 9b0fd16e37dae50ed340d269f6c09b4d8731a930 root <root@iZ11nuvpfdgZ.(none)> 1463064627 +0800	pull: Fast-forward
+9b0fd16e37dae50ed340d269f6c09b4d8731a930 540c7b3f4b0393af5334eb80d75c85e31447f883 root <root@iZ11nuvpfdgZ.(none)> 1463064893 +0800	pull: Fast-forward
+540c7b3f4b0393af5334eb80d75c85e31447f883 f1dbd7b9d69002ff10ee5b0ef392bdc1e99a9a63 root <root@iZ11nuvpfdgZ.(none)> 1463065160 +0800	pull: Fast-forward
+f1dbd7b9d69002ff10ee5b0ef392bdc1e99a9a63 29f06e5e5823ab09d971dcca3d5e6f9e4faab653 root <root@iZ11nuvpfdgZ.(none)> 1463110591 +0800	pull: Fast-forward
+29f06e5e5823ab09d971dcca3d5e6f9e4faab653 c538d2b508710f22be13135ebc5992fdc7d4890b root <root@iZ11nuvpfdgZ.(none)> 1463116829 +0800	pull: Fast-forward
+c538d2b508710f22be13135ebc5992fdc7d4890b 2bf71efcae6df85bdecab4325d6b9ec8ddf3e154 root <root@iZ11nuvpfdgZ.(none)> 1463393078 +0800	pull: Fast-forward
+2bf71efcae6df85bdecab4325d6b9ec8ddf3e154 2623a6d220f68e85404da330cfc9b90acf91723f root <root@iZ11nuvpfdgZ.(none)> 1463647644 +0800	pull: Fast-forward
+2623a6d220f68e85404da330cfc9b90acf91723f 2bf71efcae6df85bdecab4325d6b9ec8ddf3e154 root <root@iZ11nuvpfdgZ.(none)> 1463749367 +0800	reset: moving to 2bf71efcae6df85bdecab4325d6b9ec8ddf3e154
+2bf71efcae6df85bdecab4325d6b9ec8ddf3e154 4a628138b9ed121b910c98433c0903903b55327a root <root@iZ11nuvpfdgZ.(none)> 1463758803 +0800	pull: Fast-forward
+4a628138b9ed121b910c98433c0903903b55327a 9e4e6416a0378d23ea9f3590da3826926997151f root <root@iZ11nuvpfdgZ.(none)> 1464870545 +0800	pull: Fast-forward
+9e4e6416a0378d23ea9f3590da3826926997151f 60029ab1aedab5c76b19beb14c35e4c472a47aca root <root@iZ11nuvpfdgZ.(none)> 1464871127 +0800	pull: Fast-forward
+60029ab1aedab5c76b19beb14c35e4c472a47aca 4624306cdc15754803b2c062e31833cb9e5abddc root <root@iZ11nuvpfdgZ.(none)> 1464969449 +0800	pull: Fast-forward
+4624306cdc15754803b2c062e31833cb9e5abddc 60029ab1aedab5c76b19beb14c35e4c472a47aca root <root@iZ11nuvpfdgZ.(none)> 1464971502 +0800	reset: moving to 60029ab1aedab5c76b19beb14c35e4c472a47aca
+60029ab1aedab5c76b19beb14c35e4c472a47aca 1664cc21ae9492bdd7edf7f0ec7822efe459f86d root <root@iZ11nuvpfdgZ.(none)> 1464972081 +0800	pull: Fast-forward
+1664cc21ae9492bdd7edf7f0ec7822efe459f86d 93a186b5cba3cf870cb0bf227caf180603a51682 root <root@iZ11nuvpfdgZ.(none)> 1464974806 +0800	pull: Fast-forward
+93a186b5cba3cf870cb0bf227caf180603a51682 85d67645da6a1a33157cb6f6c59dd4be68e5d08a root <root@iZ11nuvpfdgZ.(none)> 1465029629 +0800	pull: Fast-forward
+85d67645da6a1a33157cb6f6c59dd4be68e5d08a 315782c15991bad7b5b6aff36b0af4a9306a7293 root <root@iZ11nuvpfdgZ.(none)> 1465031450 +0800	pull: Fast-forward
+315782c15991bad7b5b6aff36b0af4a9306a7293 ccd995ea2db5df599973747464fbf544a01835fb root <root@iZ11nuvpfdgZ.(none)> 1466024445 +0800	pull: Fast-forward
+ccd995ea2db5df599973747464fbf544a01835fb bf491146a43cac1083f9735f300a66e980c4d407 root <root@iZ11nuvpfdgZ.(none)> 1466026778 +0800	pull: Fast-forward
+bf491146a43cac1083f9735f300a66e980c4d407 17365fae9b89e3dae2d7d5b4ae2233b31ea59102 root <root@iZ11nuvpfdgZ.(none)> 1466027143 +0800	pull: Fast-forward
+17365fae9b89e3dae2d7d5b4ae2233b31ea59102 6fe5868aaea3b3186724a312dca9e74a526aa6bb root <root@iZ11nuvpfdgZ.(none)> 1466027429 +0800	pull: Fast-forward
+6fe5868aaea3b3186724a312dca9e74a526aa6bb b1afe3cb8b4d08498a03749d07ba183ff1f34f9a root <root@iZ11nuvpfdgZ.(none)> 1466027804 +0800	pull: Fast-forward
+b1afe3cb8b4d08498a03749d07ba183ff1f34f9a aee6b66dd6a599a5e0fcf43a7d7874ddee312ccd root <root@iZ11nuvpfdgZ.(none)> 1466028080 +0800	pull: Fast-forward
+aee6b66dd6a599a5e0fcf43a7d7874ddee312ccd 8961ae313624affce06442734e44c3266f9a7d11 root <root@iZ11nuvpfdgZ.(none)> 1466031196 +0800	pull: Fast-forward
+8961ae313624affce06442734e44c3266f9a7d11 f90d7ee811e7ba07c4fef5a901a305bcb42770c6 root <root@iZ11nuvpfdgZ.(none)> 1466031583 +0800	pull: Fast-forward
+f90d7ee811e7ba07c4fef5a901a305bcb42770c6 2b75491a6d735b97c3331341bb2230fcaf1a5db3 root <root@iZ11nuvpfdgZ.(none)> 1466043460 +0800	pull: Fast-forward
+2b75491a6d735b97c3331341bb2230fcaf1a5db3 b2adf532788a0e0bb7d23cc706958a4be63e7eee root <root@iZ11nuvpfdgZ.(none)> 1466048969 +0800	pull: Fast-forward

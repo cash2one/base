@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WechatURL", "WechatURL\WechatURL.csproj", "{7BA65F79-211F-4199-AEAB-B360E6847404}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QRCode", "QRCode\QRCode.csproj", "{2221AD88-A0CA-431E-B42A-570C91D96A98}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7BA65F79-211F-4199-AEAB-B360E6847404}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BA65F79-211F-4199-AEAB-B360E6847404}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BA65F79-211F-4199-AEAB-B360E6847404}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BA65F79-211F-4199-AEAB-B360E6847404}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2221AD88-A0CA-431E-B42A-570C91D96A98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2221AD88-A0CA-431E-B42A-570C91D96A98}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2221AD88-A0CA-431E-B42A-570C91D96A98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2221AD88-A0CA-431E-B42A-570C91D96A98}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,14 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = http://zeng.shan@stash.hongfu001.com:7990/scm/park/parkserver.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+	remote = origin
+	merge = refs/heads/master
+[branch "hotfix/return_code"]
+	remote = origin
+	merge = refs/heads/hotfix/return_code

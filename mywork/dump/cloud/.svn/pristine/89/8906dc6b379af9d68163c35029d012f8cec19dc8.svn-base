@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  	<meta charset="utf-8">
+  	<meta name="viewport" content="width=device-width, initial-scale=1">
+  	<title>停车缴费</title>
+  	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+  	<link rel="stylesheet" href="http://demo.open.weixin.qq.com/jssdk/css/style.css?ts=1420774989">
+</head>
+<body ontouchstart="">
+<div class="wxapi_container">
+	<div class="text" style=" text-align:center;">
+		授权回调页面
+	</div>
+</div>
+</body>
+
+<script src="https://res.wx.qq.com/open/js/jweixin-1.0.0.js"> </script>
+<script src="js/jquery.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/MyJSTools.js"></script>
+<script>
+
+//redirect:1跳转登陆界面,其他跳转停车界面
+//http://127.0.0.1:8020/WeChatTest/ParkingWechatAuthorize.html?redirect=1
+
+var redirectIndex = 0;
+function init()
+{
+//	var title = GetQueryString('title');
+//	if (title != null && title.length > 0)
+//	{
+//		$.post(my_ip_address+"/wechat/get_public", {'titleId':title},function(data)
+//		{
+//			data=eval("("+data+")");
+//			window.localStorage.setItem("title", data.title);
+//			document.title = window.localStorage.getItem("title");
+//			
+//			afterGetTitle();
+//		});
+//	}
+//	else 
+//	{
+//		afterGetTitle();
+//	}
+	
+	//window.localStorage.clear(); 
+
+	getQueryAppid();
+
+	var signOK = checkSecurity();
+	if(signOK)
+		afterGetTitle();
+	else
+		alert("数字签名不正确");
+}
+
+function checkSecurity()
+{
+	var isOK = false;
+	if(window.location.href.indexOf('?') == -1 || window.location.href.indexOf('?redirect=1') != -1)
+	{
+		// 使用默认界面风格
+		window.localStorage.removeItem('system');
+		window.localStorage.removeItem('syscolor');
+		window.localStorage.removeItem('user');
+		window.localStorage.removeItem('strict');
+		window.localStorage.removeItem('scope');
+		return true;
+	}
+	var system = getQueryStr('system', 'unknown');
+	var syscolor = '#' + getQueryStr('syscolor', '337ab7');
+	var user = getQueryStr('user', '');
+	// 停车场ID
+	window.localStorage.setItem('system',system);
+	// 按钮颜色
+	window.localStorage.setItem('syscolor',syscolor);
+	// OPEN_ID
+	window.localStorage.setItem('user',user);
+	// 严格模式
+	var strict = getQueryStr('strict', 1);
+	window.localStorage.setItem('strict', strict);
+	// 授权作用域
+	var scope = getQueryStr('scope', 1);
+	window.localStorage.setItem('scope', scope);
+	var ts = getQueryStr('ts', '');
+	var sign = getQueryStr('sign', '');
+	var msg = getQueryStr('msg', '');
+	var signObj = {};
+	signObj.system = system;
+	signObj.user = user;
+	signObj.ts = ts;
+	signObj.sign = sign;
+	signObj.msg = msg;
+	$.ajax({ 
+          type : "post", 
+          url : my_ip_address + "/wechat/checkSign", 
+          data : signObj, 
+          async : false, 
+		  dataType: "json",
+          success : function(data){ 
+            	isOK = data.result;
+          },
+		  error: function (xhr, errorInfo, ex) 
+			{ 
+				alert(ex); 
+			},
+          });
+		  
+	return isOK;
+}
+
+function afterGetTitle()
+{
+	redirectIndex = parseInt(GetQueryString('redirect'));
+	if (!redirectIndex)
+	{
+		redirectIndex = 0;
+	}
+	initOpenId ();
+}
+
+
+function initOpenId ()
+{
+	var openId = window.localStorage.getItem(my_appid+"openId");
+	if (!openId || openId == null || openId.length <= 0)
+	{//如果没有openId，就请求授权url,并且跳转到授权页面
+	
+		
+		/*$.ajax({
+				type: "POST",
+				cache: false,
+				url: my_ip_address + "/wechat/getAuthUrl",
+				data: {'redirect':redirectIndex,'appid':my_appid},
+				dataType: "jsonp",
+				//jsonp: "callback",
+				jsonpCallback: "OnGetMemberSuccessByjsonp"
+			});
+			
+			function OnGetMemberSuccessByjsonp(data) {
+				data=eval("("+data+")");
+				window.location.href = data.authUrl;
+			};
+			*/
+		var scope = window.localStorage.getItem('scope');
+		if(!scope)
+			scope = 1;
+		$.post(my_ip_address + "/wechat/getAuthUrl",{'redirect':redirectIndex,'appid':my_appid, 'scope':scope}, function(data)
+		{
+			data=eval("("+data+")");
+			window.location.href = data.authUrl;
+		});
+	}
+	else 
+	{
+		//如果有openId，那么直接跳转页面
+		switch(redirectIndex)
+		{
+			case 1:
+				window.location.href = 'ParkingLogin.html';
+				break;
+			case 2:
+				window.location.href = 'ParkingLPN.html';
+				break;	
+			case 3:
+				window.location.href = 'ParkingCenterCoupon.html';
+				break;	
+			default:
+				window.location.href = 'ParkingScan.html';
+				break;
+		}
+		//window.location.href = redirectIndex==1?('ParkingLogin.html'):('ParkingScan.html');
+	}
+};
+
+
+init();
+
+
+//window.localStorage.setItem("openId","");
+
+//$.get(my_ip_address + "/wechat/getAuthUrl", function(data) {
+//		data=eval("("+data+")");
+//		window.location.href = data.authUrl;
+//});
+
+</script> 

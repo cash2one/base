@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+		<title>验证成功</title>
+		<script src="js/jquery.min.js"></script>
+		<script src="bootstrap/dist/js/bootstrap.min.js"></script>
+		<link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link type="text/css" href="css/ParkingCSS.css" rel="stylesheet" />
+	</head>
+	<body class="html_body">
+		<div id="container" >
+			<div id="content_body" >
+				<div >
+					<h3 style="margin: 15px;">验证成功</h3>
+					<h4 style="margin: 15px;">恭喜您验证成功！</h4>
+					<h4 style="margin: 15px;">操作提示：</h4>
+					<h4 style="margin: 15px;">步骤1：扫描或直接输入停车票</h4>
+					<h4 style="margin: 15px;">步骤2：确认停车费用并支付</h4>
+					<h4 style="margin: 15px;">步骤3：请在支付成功后20分钟内离场</h4>
+					<a href="ParkingCenterBindingLicense.html" style="margin: 15px;color: #085394;font-size: 20px;">绑定车牌</a>
+				</div>
+				
+				<div style="margin:0 auto;text-align:center;margin-top: 15px;">
+					<button id = "submit_btn" type="button" class="btn btn-primary btn-lg" style="font-size: 18px;padding-bottom: 10px; padding-top: 10px;width: 100%;">停车缴费</button>
+				</div>
+			</div>
+			<div id="footing" style="text-align:center;">
+				 Powered by: <img id="logo" src="img/logo.png" width="30" height="12" /> Copyright ©2016
+			</div>
+		</div>
+		
+		
+	</body>
+</html>
+
+<script type="text/javascript">
+	var btn_submit = document.getElementById("submit_btn");//跳转停车界面
+	init ();
+	function init ()
+	{
+// 		var title = window.localStorage.getItem("title");
+//		if (title != null && title.length >0)
+//		{
+//			document.title = title;
+//		}
+		
+		// 替换按钮颜色和LOGO图标
+		var syscolor = window.localStorage.getItem('syscolor');
+		if(syscolor)
+		{
+			var btnNodes = document.querySelectorAll('.btn-primary');
+			if(btnNodes)
+			{
+				for(var i=0; i < btnNodes.length; i++)
+				{
+					if(btnNodes[i])
+					{
+						btnNodes[i].style.backgroundColor = syscolor;
+						btnNodes[i].style.borderColor = syscolor;
+					}
+				}
+			}
+		}
+		
+		if(syscolor == '#50c646')
+		{
+			if(LOGO_CUSTOMIZED)
+				document.getElementById('logo').src = "img/" + system + "_logo.png";
+			else
+				document.getElementById('logo').src = "img/logo2.png";
+		}
+		
+		var content_body = document.getElementById("content_body");
+		var footingHeight = document.getElementById("footing").offsetHeight;
+		content_body.style.height=(window.innerHeight - footingHeight - content_body.getBoundingClientRect().top)+"px";
+	}
+	btn_submit.onclick = function ()
+	{
+		window.location.href = "ParkingScan.html";
+	}
+</script>

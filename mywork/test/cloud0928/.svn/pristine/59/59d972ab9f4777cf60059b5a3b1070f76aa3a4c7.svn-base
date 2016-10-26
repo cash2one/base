@@ -1,0 +1,17 @@
+.html_body {
+	margin: 10px;
+}
+.cl:after { content: "."; display: block; height: 0; clear: both; visibility: hidden;} .cl{ zoom:1;}
+#content_body{padding-bottom: 20px;}
+#footing{position: fixed; left: 0; bottom: 0; width: 100%;}
+
+/*tickets*/
+.tickets-column{overflow: hidden; white-space: nowrap; padding: 0; }
+.tickets-column span{display: inline-block; font-size: 12px; white-space: nowrap; position: relative; padding-top: 20px;}
+.tickets-column .tickets-rmb{vertical-align: bottom; line-height: 1em; top: -.2em;}
+.tickets-column .tickets-price{vertical-align: middle; font-size: 32px; line-height: 1em;}
+/*tickets*/
+
+@media screen and (max-height:640px){
+    #footing{position: relative;}
+}

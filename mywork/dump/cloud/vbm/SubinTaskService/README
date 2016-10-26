@@ -1,0 +1,24 @@
+# JiaZhipeng
+#
+# 定时导出报表到FTP
+#
+# 1. 定时导出报表
+# 2. 导出时间可配置
+# 3. 导出停车场可选择
+# 4. 导出FTP地址可配置
+#
+# 运行说明
+#
+# 在SubinTaskService目录下：
+#
+#   1. 运行 pip3 install -r requirements.txt 安装所需环境包
+#
+#   2. 安装screen 终端任务管理工具
+#
+#   3. 运行 screen -mdS task_subin_service python3 task_service.py   创建后台任务
+#
+#   4. 运行 screen -ls  查看task_subin_service 任务ID
+#
+#   5. 运行 screen -r 'task_subin_service的ID'  根据提示 可选择默认配置（存与mongodb->park->ftp_config）或手动输入配置信息（可选择存储此配置信息）
+#
+#   6. 执行组合键'Ctrl+A+D' 将任务挂起

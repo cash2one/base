@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>停车缴费</title>
+		<script src="js/jquery.min.js"></script>
+		<script src="bootstrap/dist/js/bootstrap.min.js"></script>
+		<script src="https://res.wx.qq.com/open/js/jweixin-1.0.0.js"> </script>
+		<script src="js/config.js"></script>
+		<script src="js/MyJSTools.js"></script>
+		<link rel="stylesheet" href="css/ParkingLoadingStyle.css" />
+		<link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link type="text/css" href="css/ParkingCSS.css" rel="stylesheet" />
+	</head>
+	<body>
+	</body>
+</html>
+
+
+<script>
+	var id = "";
+	var payway = window.localStorage.getItem("payway");
+	var parkId = window.localStorage.getItem("system");
+	var openId = window.localStorage.getItem(my_appid+"openId");
+	var nickname = window.localStorage.getItem("nickname");
+	var wechatCode = GetQueryString('code');
+	init();
+	function init ()
+	{
+		checkOpenId ();
+		
+		id = GetQueryString('id');
+	}
+	function checkOpenId ()
+	{
+		if (!openId || openId == null || openId.length <= 0)
+		{
+			$.post(my_ip_address + "/wechat/getOpenId", {'code':wechatCode,'appid':my_appid}, function(data)  {
+				data=eval("("+data+")");
+				if(data.openId){
+					window.localStorage.setItem(my_appid+"openId", data.openId);
+				}	
+				if(data.nickname){
+					window.localStorage.setItem("nickname", data.nickname);
+				}
+				requestPrice (id);
+			});
+		}
+		else 
+		{
+			requestPrice (id);
+		}
+	}
+	
+	function requestPrice(id){
+		if (payway == 1){
+				updateLpn(id.substr(1));
+			}
+            else{
+				updateTicket(id);
+			}
+	}
+	
+ function updateTicket(ticket) {
+        $.post(my_ip_address + "/user/update_ticket", {'ticket': ticket,'appid':my_appid, 'openId': openId}, function (data) {
+            data = eval("(" + data + ")");
+            if (data.code == 0) {
+                alert(data.msg);
+            }
+            else if (data.code == 1) {
+                var url = 'ParkingChoosePayCharge.html?Seq=' + data.Seq +
+                        '&Price=' + data.Price +
+                        '&Ticket=' + data.Ticket +
+                        '&Time=' + data.Time +
+                        '&Entry=' + data.Entry +
+                        '&PaymentNr=' + data.PaymentNr +
+                        '&Discount=' + data.Discount +
+                        '&QuitTime=' + data.QuitTime ;
+//                '&ParkName=' + data.ParkName;
+                        window.localStorage.setItem('sendParkName',data.ParkName);
+						window.localStorage.setItem('sendNote',data.note);
+                window.location.href = url;
+            }
+        });
+    }
+	
+	function updateLpn(myLpn) {
+		var openId = window.localStorage.getItem(my_appid+"openId");
+		if (!openId)
+			checkOpenId();
+		$.post(my_ip_address+"/user/update_lpn", {'lpn' : myLpn,'appid':my_appid, 'openId': openId, 'parkId': system}, function(data)
+			{
+				data = eval("("+data+")");
+				if (data.code == RESULT_ERROR)
+				{
+					alert(data.msg);
+				}
+				else if (data.code == RESULT_SUCCESS)
+				{
+					var url = 'ParkingChoosePayCharge.html?Seq=' + data.Seq +
+                            '&Price=' + data.Price +
+                            '&Lpn=' + data.Lpn +
+                            '&Time=' + data.Time +
+                            '&Entry=' + data.Entry +
+                            '&PaymentNr=' + data.PaymentNr +
+                            '&Discount=' + data.Discount +
+                            '&QuitTime=' + data.QuitTime;
+						window.localStorage.setItem('sendParkName',data.ParkName);
+						window.localStorage.setItem('sendNote',data.note);
+                    window.location.href = url;
+				}
+			});
+	}
+</script>

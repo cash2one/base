@@ -1,0 +1,514 @@
+# -*- coding: utf-8 -*-
+
+from flask import Flask, render_template, request, redirect, url_for
+from app import app
+from config.default import Config
+import datetime
+
+import pymongo
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+from .logger import *
+
+import random
+from .models import DiscountManagement
+
+
+conn = MongoClient(host='localhost', port=27017)
+db = conn.test
+
+from .alipay_api import *
+
+from .BarCodeObject import BarCode
+
+mBarCode = BarCode()
+
+from .models import AlipaySaveOrder, UserOrder, ParkManagement, PropertyCompany
+
+RESULT_ERROR = 0
+RESULT_SUCCESS = 1
+
+
+@app.route('/subin/pay/<ticket>', methods=['GET', 'POST'])
+def subinPay(ticket):
+    getCode = mBarCode.getBarcode(ticket, None, None)
+    if getCode['code'] == RESULT_ERROR:
+        return render_template('ParkingAliTicketFail.html')
+    myParkId = (str(getCode['Ticket']))[0:4]
+    mParkManagement = ParkManagement.objects(park_id=myParkId).first()
+    ali_partner = get_alipay_partner(mParkManagement.company.alipay_partner)
+    alipay_account = get_alipay_account(mParkManagement.company.alipay_account)
+    alipay_md5_key = get_alipay_md5_key(mParkManagement.company.alipay_md5_key)
+
+    if request.method == 'POST':
+        form = request.form
+        myCode = request.form['code']
+        time = request.form['time']
+        # time = int(time)
+        #
+        # if (time <= 0):
+        #    return render_template('ParkingAliTicketFail.html')
+
+        mAlipaySaveOrder = AlipaySaveOrder.objects(code=myCode).first()
+        if (mAlipaySaveOrder != None):
+            money = mAlipaySaveOrder.Price - float(mAlipaySaveOrder.Discount)
+            req = create_req('alipay.wap.trade.create.direct', ali_partner)
+            req['req_id'] = str(myCode)
+            req['req_data'] = {
+                'subject': '停车费',  # 商品名称
+                'out_trade_no': str(myCode),  # 网站订单号
+                'total_fee': money,  # 价钱(number)，单位元，例如 0.01 代表1分钱
+                'seller_account_name': alipay_account,  # 支付宝账号
+                'call_back_url': Config.ALI_IP_ADDRESS + '/notify',  # 支付成功后浏览器跳转地址
+                'notify_url': Config.ALI_IP_ADDRESS + '/notify',  # 支付成功支付宝的通知将异步发送到此地址
+                'out_user': '',  # 网站的用户标识
+                'merchant_url': Config.ALI_IP_ADDRESS + '/subin/pay/' + ticket,  # 商品展示页面， 只是实际测试时(ios)发现支付时没地方可以跳到这个页面
+                'pay_expire': 1  # 支付过期时间
+            }
+            req['req_data'] = to_req_data('direct_trade_create_req', req['req_data'])
+            req['sign'] = get_sign(req, alipay_md5_key)
+            response = send_create(req)
+            response = parse_response(response)
+
+            if response != 'error':
+                token = response.get('request_token')
+
+                req = create_req('alipay.wap.auth.authAndExecute', ali_partner)
+                req['req_data'] = to_req_data('auth_and_execute_req', {'request_token': token})
+                req['sign'] = get_sign(req, alipay_md5_key)
+
+                url = create_auth_url(req)
+                return redirect(url)
+
+        return redirect('/')
+
+    elif request.method == 'GET':
+        # 192.168.1.153:5000/subin/pay/058500010218
+        # http://139.196.106.245:5000/subin/pay/058500010218
+
+
+
+        if (getCode['code'] == RESULT_ERROR):
+            return render_template('ParkingAliTicketFail.html')
+        elif (float(getCode['Price']) <= 0):
+            try:
+                if (getCode['PaymentNr'] == "1"):
+                    return render_template('ParkingAilZeroSuccess.html')
+
+                if (mParkManagement != None):
+                    return render_template('ParkingAliPaySuccess.html', quiteTime=mParkManagement.quit_time_limit)
+                return render_template('ParkingAliPaySuccess.html', quiteTime="20")
+            except Exception as e:
+                logging.exception(e)
+                return render_template('ParkingAliPaySuccess.html', quiteTime="20")
+
+        else:
+            out_trade_no = random_str()
+            mAlipaySaveOrder = AlipaySaveOrder.objects(code=out_trade_no).first()
+            if (mAlipaySaveOrder == None):
+                mAlipaySaveOrder = AlipaySaveOrder(code=out_trade_no,
+                                                   Seq=str(getCode['Seq']),
+                                                   Price=float(getCode['Price']),
+                                                   Ticket=str(getCode['Ticket']),
+                                                   Time=str(getCode['Time']),
+                                                   Entry=str(getCode['Entry']),
+                                                   PaymentNr=str(getCode['PaymentNr']),
+                                                   Discount=str(getCode['Discount']),
+                                                   QuitTime=str(getCode['QuitTime']))
+                mAlipaySaveOrder.save()
+
+            return render_template('ParkingAliTicket.html', getCode=getCode, out_trade_no=out_trade_no)
+
+    return render_template('ParkingAliTicketFail.html')
+
+@app.route('/notify', methods=['GET', 'POST'])
+def notify():
+    if request.method == 'GET':
+        sign = request.args.get('sign', '')  # 签名
+        result = request.args.get('result', '')  # 支付结果  result=success
+        out_trade_no = request.args.get('out_trade_no', '')  # 商户网站唯一订单号
+        trade_no = request.args.get('trade_no', '')  # 支付宝交易号
+        request_token = request.args.get('request_token', '')  # 授权令牌
+
+        d = {'sign': sign, 'result': result, 'out_trade_no': out_trade_no, 'trade_no': trade_no,
+             'request_token': request_token}
+        if result == 'success':
+
+            mAlipaySaveOrder = AlipaySaveOrder.objects(code=out_trade_no).first()
+            if (mAlipaySaveOrder != None):
+                # mAlipaySaveOrder.update(code = out_trade_no, buyEmail = buyer_email, buyId = buyer_id)
+                actualPrice = float(mAlipaySaveOrder.Price) - float(mAlipaySaveOrder.Discount)
+                respData = mBarCode.callService(mAlipaySaveOrder.Ticket, float(actualPrice), mAlipaySaveOrder.Seq,
+                                                True)
+
+                if (respData["code"] == RESULT_SUCCESS):
+                    myParkId = (str(mAlipaySaveOrder.Ticket))[0:4]
+                    mParkManagement = ParkManagement.objects(park_id=myParkId).first()
+                    myParkName = ""
+                    myCompany = ""
+                    if (mParkManagement != None):
+                        myParkName = mParkManagement.park_name
+                        myCompany = mParkManagement.company.company_name
+
+                    if not UserOrder.objects(ticket=mAlipaySaveOrder.Ticket).first():
+                        mUserOrder = UserOrder(ticket=mAlipaySaveOrder.Ticket,
+                                               alipay_id=mAlipaySaveOrder.buyEmail,
+                                               alipay_openId=mAlipaySaveOrder.buyId,
+                                               pay_type=2,
+                                               seq=mAlipaySaveOrder.Seq,
+                                               time=int(round(float(mAlipaySaveOrder.Time))),
+                                               entry=mAlipaySaveOrder.Entry,
+                                               paymentNr=mAlipaySaveOrder.PaymentNr,
+                                               discount=mAlipaySaveOrder.Discount,
+                                               price=str(mAlipaySaveOrder.Price),
+                                               pay_time=datetime.datetime.now(),
+                                               quit_time=mAlipaySaveOrder.QuitTime,
+                                               ActualPrice=str(
+                                                       float(mAlipaySaveOrder.Price) - float(
+                                                               mAlipaySaveOrder.Discount)),
+                                               isPaid=True,
+                                               park_id=myParkId,
+                                               park_name=myParkName,
+                                               company_name=myCompany,
+                                               out_trade_no=out_trade_no,
+                                               payway='0')
+                        mUserOrder.save()
+
+                    mParkManagement = ParkManagement.objects(park_id=myParkId).first()
+                    if (mParkManagement != None):
+                        return render_template('ParkingAliPaySuccess.html', quiteTime=mParkManagement.quit_time_limit)
+                    return render_template('ParkingAliPaySuccess.html', quiteTime="20")
+
+                else:
+                    return render_template('ParkingAliTicketFail.html')
+        else:
+            return 'error'
+    elif request.method == 'POST':
+        service = request.form.get('service', '')  # 接口名称
+        v = request.form.get('v', '')  # 接口版本号
+        sec_id = request.form.get('sec_id', '')  # 签名方式
+        sign = request.form.get('sign', '')  # 签名
+        notify_data = request.form.get('notify_data', '')  # 通知业务参数
+
+        d = {}
+        d['service'] = service
+        d['v'] = v
+        d['sec_id'] = sec_id
+        d['sign'] = sign
+        d['notify_data'] = notify_data
+
+        out_trade_no, trade_status, buyer_email, buyer_id = parse_trade_status(notify_data)
+
+        mAlipaySaveOrder = AlipaySaveOrder.objects(code=out_trade_no).first()
+        # getCode = mBarCode.getBarcode(mAlipaySaveOrder.Ticket, None, None)
+        myParkId = (str(mAlipaySaveOrder.Ticket))[0:4]
+        mParkManagement = ParkManagement.objects(park_id=myParkId).first()
+        alipay_md5_key = get_alipay_md5_key(mParkManagement.company.alipay_md5_key)
+        logging.info('mAlipaySaveOrder.buyEmail11-------->' + str(mAlipaySaveOrder.buyEmail))
+        if (mParkManagement != None):
+            myParkName = mParkManagement.park_name
+            myCompany = mParkManagement.company.company_name
+        if (trade_status == 'TRADE_FINISHED' or trade_status == 'TRADE_SUCCESS') and (
+                    sign == get_notify_sign(d, alipay_md5_key)):
+            logging.info('mAlipaySaveOrder.buyEmail22-------->' + str(mAlipaySaveOrder.buyEmail))
+            if sign == get_notify_sign(d, alipay_md5_key):
+                logging.info('mAlipaySaveOrder.buyEmail33-------->' + str(mAlipaySaveOrder.buyEmail))
+                if (mAlipaySaveOrder != None):
+                    mAlipaySaveOrder.update(code=out_trade_no, buyEmail=buyer_email, buyId=buyer_id)
+                    useOrder = UserOrder.objects(seq=mAlipaySaveOrder.Seq, ticket=mAlipaySaveOrder.Ticket).order_by('-pay_time').first()
+
+                    if useOrder:
+                        useOrder.update(alipay_id=buyer_email,
+                                        alipay_openId=buyer_id,
+                                        pay_type=2,
+                                        isPaid=True,
+                                        pay_time=datetime.datetime.now(),
+                                        quit_time=mAlipaySaveOrder.QuitTime,
+                                        ActualPrice=str(
+                                                float(mAlipaySaveOrder.Price) - float(
+                                                        mAlipaySaveOrder.Discount)),
+                                        payway='0')
+                    else:
+                        mUserOrder = UserOrder(ticket=mAlipaySaveOrder.Ticket,
+                                               alipay_id=buyer_email,
+                                               alipay_openId=buyer_id,
+                                               pay_type=2,
+                                               seq=mAlipaySaveOrder.Seq,
+                                               time=int(round(float(mAlipaySaveOrder.Time))),
+                                               entry=mAlipaySaveOrder.Entry,
+                                               paymentNr=mAlipaySaveOrder.PaymentNr,
+                                               discount=mAlipaySaveOrder.Discount,
+                                               price=str(mAlipaySaveOrder.Price),
+                                               pay_time=datetime.datetime.now(),
+                                               quit_time=mAlipaySaveOrder.QuitTime,
+                                               ActualPrice=str(
+                                                       float(mAlipaySaveOrder.Price) - float(
+                                                               mAlipaySaveOrder.Discount)),
+                                               isPaid=True,
+                                               park_id=myParkId,
+                                               park_name=myParkName,
+                                               company_name=myCompany,
+                                               out_trade_no=out_trade_no,
+                                               payway='0')
+                        mUserOrder.save()
+
+                return 'success'
+            else:
+                return 'bad sign'
+        else:
+            return 'unknow trade status'
+
+
+@app.route('/subin/pay/subinPaylpn', methods=['GET', 'POST'])
+def subinPaylpn():
+    lpn = request.args.get('lpn', '')
+    myParkId = request.args.get('parkId', '')
+    getCode = mBarCode.getBarcodeByLPN(lpn, None, None, myParkId)
+    if getCode['code'] == RESULT_ERROR:
+        return render_template('ParkingAliTicketFail.html')
+    mParkManagement = ParkManagement.objects(park_id=myParkId).first()
+    ali_partner = get_alipay_partner(mParkManagement.company.alipay_partner)
+    alipay_account = get_alipay_account(mParkManagement.company.alipay_account)
+    alipay_md5_key = get_alipay_md5_key(mParkManagement.company.alipay_md5_key)
+
+    if request.method == 'POST':
+        form = request.form
+        myCode = request.form['code']
+        time = request.form['time']
+        # time = int(time)
+        #
+        # if (time <= 0):
+        #    return render_template('ParkingAliTicketFail.html')
+
+        mAlipaySaveOrder = AlipaySaveOrder.objects(code=myCode).first()
+        if (mAlipaySaveOrder != None):
+            money = mAlipaySaveOrder.Price - float(mAlipaySaveOrder.Discount)
+            req = create_req('alipay.wap.trade.create.direct', ali_partner)
+            req['req_id'] = str(myCode)
+            req['req_data'] = {
+                'subject': '停车费',  # 商品名称
+                'out_trade_no': str(myCode),  # 网站订单号
+                'total_fee': money,  # 价钱(number)，单位元，例如 0.01 代表1分钱
+                'seller_account_name': alipay_account,  # 支付宝账号
+                'call_back_url': Config.ALI_IP_ADDRESS + '/notifylpn',  # 支付成功后浏览器跳转地址
+                'notify_url': Config.ALI_IP_ADDRESS + '/notifylpn',  # 支付成功支付宝的通知将异步发送到此地址
+                'out_user': '',  # 网站的用户标识
+                'merchant_url': Config.ALI_IP_ADDRESS + '/subin/pay/' + lpn,  # 商品展示页面， 只是实际测试时(ios)发现支付时没地方可以跳到这个页面
+                'pay_expire': 1  # 支付过期时间
+            }
+            req['req_data'] = to_req_data('direct_trade_create_req', req['req_data'])
+            req['sign'] = get_sign(req, alipay_md5_key)
+            response = send_create(req)
+            response = parse_response(response)
+
+            if response != 'error':
+                token = response.get('request_token')
+
+                req = create_req('alipay.wap.auth.authAndExecute', ali_partner)
+                req['req_data'] = to_req_data('auth_and_execute_req', {'request_token': token})
+                req['sign'] = get_sign(req, alipay_md5_key)
+
+                url = create_auth_url(req)
+                return redirect(url)
+
+        return redirect('/')
+
+    elif request.method == 'GET':
+        if (getCode['code'] == RESULT_ERROR):
+            return render_template('ParkingAliTicketFail.html')
+        elif (float(getCode['Price']) <= 0):
+            try:
+                if (getCode['PaymentNr'] == "1"):
+                    return render_template('ParkingAilZeroSuccess.html')
+
+                if (mParkManagement != None):
+                    return render_template('ParkingAliPaySuccess.html', quiteTime=mParkManagement.quit_time_limit)
+                return render_template('ParkingAliPaySuccess.html', quiteTime="20")
+            except Exception as e:
+                logging.exception(e)
+                return render_template('ParkingAliPaySuccess.html', quiteTime="20")
+
+        else:
+            out_trade_no = random_str()
+            mAlipaySaveOrder = AlipaySaveOrder.objects(code=out_trade_no).first()
+            if (mAlipaySaveOrder == None):
+                mAlipaySaveOrder = AlipaySaveOrder(code=out_trade_no,
+                                                   Seq=str(getCode['Seq']),
+                                                   Price=float(getCode['Price']),
+                                                   lpn=str(getCode['Lpn']),
+                                                   Time=str(getCode['Time']),
+                                                   Entry=str(getCode['Entry']),
+                                                   PaymentNr=str(getCode['PaymentNr']),
+                                                   Discount=str(getCode['Discount']),
+                                                   QuitTime=str(getCode['QuitTime']),
+                                                   parkId=myParkId,
+                                                   payway='1')
+                mAlipaySaveOrder.save()
+
+            return render_template('ParkingAliLpn.html', getCode=getCode, out_trade_no=out_trade_no)
+
+    return render_template('ParkingAliTicketFail.html')
+
+@app.route('/notifylpn', methods=['GET', 'POST'])
+def notifylpn():
+    if request.method == 'GET':
+        sign = request.args.get('sign', '')  # 签名
+        result = request.args.get('result', '')  # 支付结果  result=success
+        out_trade_no = request.args.get('out_trade_no', '')  # 商户网站唯一订单号
+        trade_no = request.args.get('trade_no', '')  # 支付宝交易号
+        request_token = request.args.get('request_token', '')  # 授权令牌
+
+        d = {'sign': sign, 'result': result, 'out_trade_no': out_trade_no, 'trade_no': trade_no,
+             'request_token': request_token}
+        if result == 'success':
+
+            mAlipaySaveOrder = AlipaySaveOrder.objects(code=out_trade_no).first()
+            if (mAlipaySaveOrder != None):
+                actualPrice = float(mAlipaySaveOrder.Price) - float(mAlipaySaveOrder.Discount)
+                myParkId = mAlipaySaveOrder.parkId
+                respData = mBarCode.callServiceByLpn(myParkId, mAlipaySaveOrder.lpn, float(actualPrice), mAlipaySaveOrder.Seq,
+                                                True)
+
+                if (respData["code"] == RESULT_SUCCESS):
+                    mParkManagement = ParkManagement.objects(park_id=myParkId).first()
+                    myParkName = ""
+                    myCompany = ""
+                    if (mParkManagement != None):
+                        myParkName = mParkManagement.park_name
+                        myCompany = mParkManagement.company.company_name
+
+                    if not UserOrder.objects(out_trade_no=out_trade_no).first():
+                        mUserOrder = UserOrder(license_plate=mAlipaySaveOrder.lpn,
+                                               alipay_id=mAlipaySaveOrder.buyEmail,
+                                               alipay_openId=mAlipaySaveOrder.buyId,
+                                               pay_type=2,
+                                               seq=mAlipaySaveOrder.Seq,
+                                               time=int(round(float(mAlipaySaveOrder.Time))),
+                                               entry=mAlipaySaveOrder.Entry,
+                                               paymentNr=mAlipaySaveOrder.PaymentNr,
+                                               discount=mAlipaySaveOrder.Discount,
+                                               price=str(mAlipaySaveOrder.Price),
+                                               pay_time=datetime.datetime.now(),
+                                               quit_time=mAlipaySaveOrder.QuitTime,
+                                               ActualPrice=str(
+                                                       float(mAlipaySaveOrder.Price) - float(
+                                                               mAlipaySaveOrder.Discount)),
+                                               isPaid=True,
+                                               park_id=myParkId,
+                                               park_name=myParkName,
+                                               company_name=myCompany,
+                                               out_trade_no=out_trade_no,
+                                               payway='1')
+                        mUserOrder.save()
+
+                    mParkManagement = ParkManagement.objects(park_id=myParkId).first()
+                    if (mParkManagement != None):
+                        return render_template('ParkingAliPaySuccess.html', quiteTime=mParkManagement.quit_time_limit)
+                    return render_template('ParkingAliPaySuccess.html', quiteTime="20")
+
+                else:
+                    return render_template('ParkingAliTicketFail.html')
+        else:
+            return 'error'
+    elif request.method == 'POST':
+        service = request.form.get('service', '')  # 接口名称
+        v = request.form.get('v', '')  # 接口版本号
+        sec_id = request.form.get('sec_id', '')  # 签名方式
+        sign = request.form.get('sign', '')  # 签名
+        notify_data = request.form.get('notify_data', '')  # 通知业务参数
+
+        d = {}
+        d['service'] = service
+        d['v'] = v
+        d['sec_id'] = sec_id
+        d['sign'] = sign
+        d['notify_data'] = notify_data
+
+        out_trade_no, trade_status, buyer_email, buyer_id = parse_trade_status(notify_data)
+
+        mAlipaySaveOrder = AlipaySaveOrder.objects(code=out_trade_no).first()
+        myParkId = mAlipaySaveOrder.parkId
+        mParkManagement = ParkManagement.objects(park_id=myParkId).first()
+        if mParkManagement == None:
+            return 'out_trade_no is not exist.'
+        alipay_md5_key = get_alipay_md5_key(mParkManagement.company.alipay_md5_key)
+        logging.info('mAlipaySaveOrder.buyEmail11-------->' + str(mAlipaySaveOrder.buyEmail))
+        if (mParkManagement != None):
+            myParkName = mParkManagement.park_name
+            myCompany = mParkManagement.company.company_name
+        if (trade_status == 'TRADE_FINISHED' or trade_status == 'TRADE_SUCCESS') and (
+                    sign == get_notify_sign(d, alipay_md5_key)):
+            logging.info('mAlipaySaveOrder.buyEmail22-------->' + str(mAlipaySaveOrder.buyEmail))
+            if sign == get_notify_sign(d, alipay_md5_key):
+                logging.info('mAlipaySaveOrder.buyEmail33-------->' + str(mAlipaySaveOrder.buyEmail))
+                if (mAlipaySaveOrder != None):
+                    mAlipaySaveOrder.update(code=out_trade_no, buyEmail=buyer_email, buyId=buyer_id)
+                    useOrder = UserOrder.objects(seq=mAlipaySaveOrder.Seq, license_plate=mAlipaySaveOrder.lpn).order_by('-pay_time').first()
+
+                    if useOrder:
+                        useOrder.update(alipay_id=buyer_email,
+                                        alipay_openId=buyer_id,
+                                        pay_type=2,
+                                        isPaid=True,
+                                        pay_time=datetime.datetime.now(),
+                                        quit_time=mAlipaySaveOrder.QuitTime,
+                                        ActualPrice=str(
+                                                float(mAlipaySaveOrder.Price) - float(
+                                                        mAlipaySaveOrder.Discount)),
+                                        payway='1')
+                    else:
+                        mUserOrder = UserOrder(license_plate=mAlipaySaveOrder.lpn,
+                                               alipay_id=buyer_email,
+                                               alipay_openId=buyer_id,
+                                               pay_type=2,
+                                               seq=mAlipaySaveOrder.Seq,
+                                               time=int(round(float(mAlipaySaveOrder.Time))),
+                                               entry=mAlipaySaveOrder.Entry,
+                                               paymentNr=mAlipaySaveOrder.PaymentNr,
+                                               discount=mAlipaySaveOrder.Discount,
+                                               price=str(mAlipaySaveOrder.Price),
+                                               pay_time=datetime.datetime.now(),
+                                               quit_time=mAlipaySaveOrder.QuitTime,
+                                               ActualPrice=str(
+                                                       float(mAlipaySaveOrder.Price) - float(
+                                                               mAlipaySaveOrder.Discount)),
+                                               isPaid=True,
+                                               park_id=myParkId,
+                                               park_name=myParkName,
+                                               company_name=myCompany,
+                                               out_trade_no=out_trade_no,
+                                               payway='1')
+                        mUserOrder.save()
+
+                return 'success'
+            else:
+                return 'bad sign'
+        else:
+            return 'unknow trade status'
+
+
+@app.route('/order/<id>')
+def order(id):
+    order = db.alipay.orders.find_one({'_id': ObjectId(id)})
+    return render_template('order.html', order=order)
+
+
+def get_alipay_account(account):
+    if account:
+        return account
+    else:
+        return Config.ALI_ACCOUNT
+
+
+def get_alipay_partner(partner):
+    if partner:
+        return partner
+    else:
+        return Config.ALI_PARTNER
+
+
+def get_alipay_md5_key(key):
+    if key:
+        return key
+    else:
+        return Config.ALI_MD5_KEY

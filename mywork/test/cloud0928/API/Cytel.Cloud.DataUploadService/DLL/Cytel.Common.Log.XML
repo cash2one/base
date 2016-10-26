@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Cytel.Common.Log</name>
+    </assembly>
+    <members>
+        <member name="T:Cytel.Common.Log.LogWrapper">
+            <summary>
+            log4net包装
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Log.LogWrapper.logger">
+            <summary>
+            The logger
+            </summary>
+        </member>
+        <member name="M:Cytel.Common.Log.LogWrapper.#cctor">
+            <summary>
+            Initializes static members of the <see cref="T:Cytel.Common.Log.LogWrapper"/> class.
+            </summary>
+        </member>
+        <member name="M:Cytel.Common.Log.LogWrapper.WriteDebug(System.String[])">
+            <summary>
+            Writes the debug.
+            </summary>
+            <param name="logItem">The log item.</param>
+        </member>
+        <member name="M:Cytel.Common.Log.LogWrapper.WriteInfo(System.String[])">
+            <summary>
+            Writes the information.
+            </summary>
+            <param name="logItem">The log item.</param>
+        </member>
+        <member name="M:Cytel.Common.Log.LogWrapper.WriteWarning(System.String[])">
+            <summary>
+            Writes the warning.
+            </summary>
+            <param name="logItem">The log item.</param>
+        </member>
+        <member name="M:Cytel.Common.Log.LogWrapper.WriteError(System.String[])">
+            <summary>
+            Writes the error.
+            </summary>
+            <param name="logItem">The log item.</param>
+        </member>
+        <member name="M:Cytel.Common.Log.LogWrapper.WriteFetal(System.String[])">
+            <summary>
+            Writes the fetal.
+            </summary>
+            <param name="logItem">The log item.</param>
+        </member>
+        <member name="M:Cytel.Common.Log.LogWrapper.BuildLogItem(System.String[])">
+            <summary>
+            构建日志
+            </summary>
+            <param name="logItems">日志信息</param>
+            <returns>返回构建后日志内容</returns>
+        </member>
+    </members>
+</doc>

@@ -1,0 +1,13 @@
+
+var my_ip_address = 'http://ad.subinwechat.com';
+var query_appid = window.localStorage.getItem('appid');
+//var my_appid ='wxd396e26e8729f0d1';
+var my_appid = (query_appid != null && query_appid.toString().trim() != "") ? query_appid.toString():'wxd396e26e8729f0d1';
+var RESULT_SUCCESS = 1;
+var RESULT_ERROR = 0;
+var LOGO_CUSTOMIZED = false;
+function getQueryAppid() {
+
+    window.localStorage.removeItem("id");
+    window.localStorage.setItem('appid', getQueryStr('id', ''));
+}

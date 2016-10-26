@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<NumberInfo>
+  <!--TotalSpace总车位-->
+  <TSpace>100</TSpace>
+  <!--TMonthly月租总车位-->
+  <TMonthly>80</TMonthly>
+  <!--FMonthly月租剩余车位-->
+  <FMonthly>80</FMonthly>
+  <!--TTemp时租总车位-->
+  <TTemp>20</TTemp>
+  <!--FTemp时租剩余车位-->
+  <FTemp>20</FTemp>
+</NumberInfo>

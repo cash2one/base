@@ -1,0 +1,62 @@
+<!-- extend base layout -->
+{% extends "sb-admin/master.html" %}
+
+{% from "sb-admin/macros/dashboard/counticon.html" import count_icon %}
+{% from "sb-admin/macros/dashboard/areachart.html" import area_chart %}
+{% from "sb-admin/macros/dashboard/barchart.html" import bar_chart %}
+{% from "sb-admin/macros/dashboard/timeline.html" import timeline %}
+{% from "sb-admin/macros/dashboard/notification.html" import notification %}
+{% from "sb-admin/macros/dashboard/donut.html" import donut %}
+{% from "sb-admin/macros/dashboard/chat.html" import chat %}
+
+{% block body %}
+<div class="row">
+	<div class="col-lg-4 col-md-6">
+		{{count_icon(admin_view.today_income, "今日收入", "money", "info", "userorder/?alter=today_income")}}
+	</div>
+	<div class="col-lg-4 col-md-6">
+		{{count_icon(admin_view.week_income, "本周收入", "list", "info", "userorder/?alter=week_income")}}
+	</div>
+	<div class="col-lg-4 col-md-6">
+		{{count_icon(admin_view.month_income, "本月收入", "calendar", "info", "userorder/?alter=month_income")}}
+	</div>
+	<div class="col-lg-4 col-md-6">
+		{{count_icon(admin_view.today_parked_count, "今日交费量", "car", "info", "userorder/?alter=today_income")}}
+	</div>
+    {% if admin_view.current_user.has_role('SuperAdmin')%}
+        <div class="col-lg-4 col-md-6">
+		{{count_icon(admin_view.today_regist_count, "注册用户总数", "user", "info", "user/?alter=today_regist")}}
+	    </div>
+        <div class="col-lg-4 col-md-6">
+            {{count_icon(admin_view.all_regist_count, "关注用户总数", "users", "info", "user")}}
+        </div>
+    {% endif %}
+    
+
+</div>
+
+{#<div class="row">
+    <div class="col-lg-8">
+        {{area_chart("Area Chart Example")}}
+        {{bar_chart("Bar Chart Example")}}
+        {{timeline("Responsive Timeline")}}
+    </div>
+    <div class="col-lg-4">
+        {{notification("Notifications Panel")}}
+        {{donut("Donut Chart Example")}}
+        {{chat("Chat")}}
+    </div>
+</div>#}
+	
+{% endblock %}
+
+{% block tail %}
+
+    <!-- Timeline CSS -->
+    <link href="/dist/css/timeline.css" rel="stylesheet">
+
+    <!-- Morris Charts JavaScript -->
+    <script src="/bower_components/raphael/raphael-min.js"></script>
+    <script src="/bower_components/morrisjs/morris.min.js"></script>
+    <script src="/js/morris-data.js"></script>
+{% endblock %}

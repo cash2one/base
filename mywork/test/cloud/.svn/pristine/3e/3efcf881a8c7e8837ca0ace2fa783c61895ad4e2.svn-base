@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+		<title>扫描消费收据</title>
+		<script src="js/config.js"></script>
+		<script src="js/jquery.min.js"></script>
+		<script src="bootstrap/dist/js/bootstrap.min.js"></script>
+		<link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css">
+		<link type="text/css" href="css/ParkingCSS.css" rel="stylesheet" />
+		<style>
+			.my_list_item
+			{
+				background: url(img/coupon_bg.png) no-repeat center;
+				background-size:100%;
+			}
+		</style>
+	</head>
+	<body class="html_body">
+		<div id="container" >
+			<div id="content_body">
+				<div id = "above_coupon_list">
+					<div style="margin-top: 10px;margin-bottom: 10px;">
+					  <h4 style="margin-bottom: 15px;margin-top: 15px;">请扫描收据上二维码获取停车优惠券。</h4>
+					</div>
+					
+					<button id = "scan_coupon_btn" type="button" class="btn btn-primary btn-lg" style="width: 100%;">扫码获取优惠券</button>
+					
+					<div style="margin-top: 10px;">
+						<span class="glyphicon glyphicon-question-sign" aria-hidden="true"><a href="ParkingCenterCouponProtocol.html" style="color: #085394;">卡券使用规则</a></span>
+						<a href="ParkingCenterCouponAD.html" style="color:#085394;float:right;">优惠活动</a>
+					</div>
+				</div>
+				
+				<div id="coupon_list" class="list-group">
+				</div>
+			</div>
+			<div id="footing" style="text-align:center;">
+				 Powered by: <img id="logo" src="img/logo.png" width="30" height="12" /> Copyright ©2016
+			</div>
+		</div>
+	</body>
+</html>
+
+<script src="https://res.wx.qq.com/open/js/jweixin-1.0.0.js"> </script>
+<script type="text/javascript">
+	var coupon_list = document.getElementById("coupon_list");
+	var scan_coupon_btn = document.getElementById("scan_coupon_btn");
+	var openId = window.localStorage.getItem(my_appid+"openId");
+
+	init();
+	
+	function init()
+	{
+// 		var title = window.localStorage.getItem("title");
+//		if (title != null && title.length >0)
+//		{
+//			document.title = title;
+//		}
+		
+		// 替换按钮颜色和LOGO图标
+		var syscolor = window.localStorage.getItem('syscolor');
+		if(syscolor)
+		{
+			var btnNodes = document.querySelectorAll('.btn-primary');
+			if(btnNodes)
+			{
+				for(var i=0; i < btnNodes.length; i++)
+				{
+					if(btnNodes[i])
+					{
+						btnNodes[i].style.backgroundColor = syscolor;
+						btnNodes[i].style.borderColor = syscolor;
+					}
+				}
+			}
+		}
+		
+		if(syscolor == '#50c646')
+		{
+			if(LOGO_CUSTOMIZED)
+				document.getElementById('logo').src = "img/" + system + "_logo.png";
+			else
+				document.getElementById('logo').src = "img/logo2.png";
+		}
+		
+		scan_coupon_btn.setAttribute("disabled", "true");//屏蔽按钮
+		
+		baseLineSet ();
+		$.post(my_ip_address + "/weixin/get_token", {'myurl' :location.href.split('#')[0],'appid':my_appid}, function(data) {
+				data=eval("("+data+")");
+				wx.config({
+					  debug: false,
+				      appId: my_appid,
+				      timestamp: data.timestamp,
+				      nonceStr: data.noncestr,
+				      signature: data.signature,
+				      jsApiList: [
+				      	'closeWindow',
+				        'scanQRCode'
+				      ]
+				});
+		});
+	
+		reflushCouponList ();
+	}
+	function addCouponItem (couponPrice, couponName,couponPark,couponTime, couponStart)
+	{
+		
+		var divHeight = (coupon_list.offsetWidth-30)*4/10 + 20;
+		
+		var li = document.createElement("div");
+		li.classname="list-group-item my_list_item cl";
+		li.style.backgroundImage= "url(img/coupon_bg.png)";
+		li.style.backgroundRepeat="no-repeat";
+		li.style.backgroundPosition="center";
+		li.style.backgroundSize="100%";
+		li.style.margin = "0px";
+		li.style.border = "0px";
+					
+		var wholeDiv = document.createElement("div");
+		wholeDiv.style.height = divHeight+"px";
+//		wholeDiv.style.width = (coupon_list.offsetWidth-30)+"px";
+					
+		var leftDiv = document.createElement("div");
+		leftDiv.style.height = "88%";
+		leftDiv.style.width = "40%";
+		leftDiv.style.float = "left";
+        leftDiv.className="tickets-column";
+		leftDiv.style.marginTop = "0px";
+		leftDiv.style.marginLeft="0px";
+		leftDiv.style.textAlign ="center";
+					
+		var RMBIcon = document.createElement("span");
+//		RMBIcon.style.float = "left";
+//        RMBIcon.style.fontSize = "12px";
+//		RMBIcon.style.marginTop = divHeight*70/160 + "px";
+        RMBIcon.className="tickets-rmb";
+		RMBIcon.style.display = "inline-block";
+		RMBIcon.style.marginLeft = "0px";
+		RMBIcon.innerText = "￥";
+					
+	
+		var marginTopLeft = ((coupon_list.offsetWidth-30)*4/10 - 55 -20)/2;
+		var price = document.createElement("span");
+//		price.style.float = "left";
+//		price.style.fontSize = "30px";
+        price.className="tickets-price";
+		price.style.display = "inline-block";
+//		price.style.marginTop = marginTopLeft+"px";
+//		price.style.marginBottom = marginTopLeft+"px";
+		price.style.padding="0px";
+		price.innerText = couponPrice;
+		
+		var width = 15;
+		if (couponPrice < 10)
+		{
+			width += 31;
+		}
+		else if(couponPrice < 100)
+		{
+			width += 62;
+		}
+		else 
+		{
+			width += 93;
+		}
+		
+		var leftSmallDiv = document.createElement("div");
+		leftSmallDiv.style.marginTop = "40%";
+		leftSmallDiv.style.height = "50%";
+//		leftSmallDiv.style.width= width+"px";
+		leftSmallDiv.style.marginLeft="10%";
+		leftSmallDiv.style.marginRight="10%";
+					
+		leftSmallDiv.appendChild(RMBIcon);
+		leftSmallDiv.appendChild(price);
+		leftDiv.appendChild(leftSmallDiv);
+					
+				
+		var rightDiv = document.createElement("div");
+		rightDiv.style.height = "88%";
+		rightDiv.style.width = "60%";
+		rightDiv.style.float = "right";
+		rightDiv.style.marginTop = "auto";
+		rightDiv.style.marginBottom = "auto";
+		rightDiv.style.paddingLeft = "10px";
+		
+					
+		var name = document.createElement("p");
+		name.style.marginTop = "0px";
+		name.style.marginLeft="0px";
+		name.style.marginBottom="0px";
+		name.style.float="none";
+		name.style.fontSize = "20px";
+		name.style.overflow = "hidden";
+		name.style.textOverflow="ellipsis";
+		name.style.whiteSpace="nowrap";
+		name.innerText=couponName;
+					
+		var park = document.createElement("p");
+		park.style.margin = "0px";
+		park.style.float="none";
+		park.style.overflow = "hidden";
+		park.style.textOverflow="ellipsis";
+		park.style.whiteSpace="nowrap";
+		park.innerText=couponPark;
+					
+		var time = document.createElement("p");
+		time.style.margin = "0px";
+		time.style.float="none";
+		time.style.overflow = "hidden";
+		time.style.textOverflow="ellipsis";
+		time.style.whiteSpace="nowrap";
+		time.innerText="有效期:"+couponStart+" ~";
+		
+		var startTime = document.createElement("p");
+		startTime.style.margin = "0px";
+		startTime.style.float="none";
+		startTime.style.overflow = "hidden";
+		startTime.style.textOverflow="ellipsis";
+		startTime.style.whiteSpace="nowrap";
+		startTime.innerText= couponTime+"";
+		
+		var marginTopRight = ((coupon_list.offsetWidth-30)*4/10 - 30 -40)/2;	
+		var rightSmallDiv = document.createElement("div");
+		rightSmallDiv.style.width = "100%"
+		rightSmallDiv.style.verticalAlign = "middle";
+		rightSmallDiv.style.marginTop = marginTopRight + "px";
+					
+		rightSmallDiv.appendChild(name);
+		rightSmallDiv.appendChild(park);
+		rightSmallDiv.appendChild(time);
+		rightSmallDiv.appendChild(startTime);
+		rightDiv.appendChild(rightSmallDiv);
+					
+		wholeDiv.appendChild(leftDiv);
+		wholeDiv.appendChild(rightDiv);
+					
+		li.appendChild(wholeDiv);
+		li.onclick = function()
+		{
+			window.location.href = "ParkingScan.html";
+		}
+		coupon_list.appendChild(li);
+	}
+    
+//    addCouponItem (88.88, 'dddddd','couponPark','couponTime', 'couponStart');
+	
+	function baseLineSet ()
+	{
+		var above_coupon_list = document.getElementById("above_coupon_list");
+		var content_body = document.getElementById("content_body");
+		var footingHeight = document.getElementById("footing").offsetHeight;
+		var height = above_coupon_list.getBoundingClientRect().top + above_coupon_list.offsetHeight + coupon_list.scrollHeight;
+		if (height > window.innerHeight)
+		{
+			content_body.style.height = "auto";
+		}
+		else 
+		{
+		   	content_body.style.height=(window.innerHeight - footingHeight - content_body.getBoundingClientRect().top)+"px";
+		}
+	}
+	
+	function reflushCouponList()
+	{
+//		no_data.hidden = true;
+//		coupon_list.hidden = false;
+//		openId="oPOuMwpjAVX4WTWoWKv0ShcDWWP8";
+		$.post(my_ip_address+"/user/get_user_coupon",{'openId' :openId},function(data)
+		{
+			data=eval("("+data+")");
+			parseCouponList (data);
+		});
+		
+	}
+
+	
+	function parseCouponList(data)
+	{
+		var childs=coupon_list.childNodes;    
+		for(var i=childs.length-1;i>=0;i--){    
+			coupon_list.removeChild(childs.item(i));    
+		} 
+				
+		var div = document.createElement("div");
+		div.style.textAlign = "center";
+		div.style.width = "auto";
+		div.style.height = "100%";
+		
+		var p = document.createElement("p");
+		p.style.margin = "100px";
+		p.innerText = "您还没有优惠券";
+				
+		div.appendChild(p);
+		coupon_list.appendChild(div);
+		
+		if (data.code == RESULT_SUCCESS && data.coupon_list.length > 0)
+		{
+			var childs=coupon_list.childNodes;    
+			for(var i=childs.length-1;i>=0;i--)
+			{
+				coupon_list.removeChild(childs.item(i));    
+			}  
+			
+			var add_html = "";
+			for (var i = 0 ; i < data.coupon_list.length; i ++)
+			{
+//				COUPON_STATUS_USED = 0 # 已经使用
+//				COUPON_STATUS_VAILD = 1 # 正常，可以使用
+//				COUPON_STATUS_OUT = 2 #过期，不可以使用 
+				var coupon_id = data.coupon_list[i].coupon_id;
+				var park_name = data.coupon_list[i].park_name;
+				var coupon_name = data.coupon_list[i].coupon_name;
+				var coupon_status = data.coupon_list[i].coupon_status == 0?("已使用"):(data.coupon_list[i].coupon_status == 1?("未使用"):("已过期"));
+				var coupon_price = data.coupon_list[i].coupon_price;
+				coupon_price = parseFloat(coupon_price).toFixed(2)
+                coupon_price = parseFloat(coupon_price)
+				var coupon_validity = data.coupon_list[i].coupon_validity;
+				var receive_count = data.coupon_list[i].receive_count;
+				var coupon_start = data.coupon_list[i].start_time;
+				
+				addCouponItem (coupon_price, coupon_name+"x"+receive_count,park_name,coupon_validity, coupon_start);
+			}
+			baseLineSet ();
+		}
+		else 
+		{
+			baseLineSet ();
+		}
+	}
+	function exchangeCoupon(mydata)
+	{
+		if (mydata.indexOf("?") >= 0)
+		{
+			var data = mydata.split("?");
+			mydata = data[data.length -1];
+		}
+		var system = getCouponValue(mydata, /system=(.*?)&/, '');
+		var seller = getCouponValue(mydata, /seller=(.*?)&/, '');
+		var ts = getCouponValue(mydata, /time=(.*?)&/, '');
+		var price = getCouponValue(mydata, /price=(.*?)&/, 0);
+		var id = getCouponValue(mydata, /id=(.*?)&/, '');
+		var msg = getCouponValue(mydata, /msg=(.*?)&/, '');
+		var sign = getCouponValue(mydata, /sign=(.*)/, '');
+		
+		var signObj = {};
+		signObj.openId = openId;
+		signObj.system = system.trim();
+		signObj.seller = seller.trim();
+		signObj.ts = ts.trim();
+		signObj.price = price.trim();
+		signObj.id = id.trim();
+		signObj.msg = msg.trim();
+		signObj.sign = sign.trim();
+		
+		$.post(my_ip_address+"/user/exchange_coupon", signObj, function(data)
+		{
+			data=eval("("+data+")");
+			if (data.code == 0)
+			{
+				alert(data.msg);
+			}
+			else 
+			{
+				parseCouponList (data);
+				Toast("换取卡券成功!");
+			}
+		});
+	}
+	
+	function getCouponValue(data, re, defaultValue){
+		arr = re.exec(data);  
+		if(arr.length > 0 && arr[1])
+			return arr[1];
+		return defaultValue;
+	}
+	
+	wx.ready(function(){
+		scan_coupon_btn.removeAttribute("disabled");//启用按钮
+		scan_coupon_btn.onclick = function()
+		{
+			wx.scanQRCode({ 
+				needResult: 1,
+	      		desc: 'scanQRCode desc',
+		      	success: function (res) {
+			      	mydata = eval("("+JSON.stringify(res)+")");
+			      	exchangeCoupon(mydata.resultStr);
+		      	}
+		    });
+		}
+	});
+	
+	wx.error(function (res) {
+		alert(res.errMsg);
+	});
+	
+	
+	function Toast(msg,duration)
+	{
+		var left = (window.innerWidth - 150)/2;
+		var top = (window.innerHeight - 100);
+		duration=isNaN(duration)?3000:duration;
+		var m = document.createElement('div');
+		m.innerHTML = msg;
+		m.style.cssText="width:150px; min-width:100px;opacity:0.5; height:40px; color:#fff; line-height:40px; text-align:center; border-radius:5px; position:fixed; top:"+top+"px; left:"+left+"px; z-index:999999; font-weight:bold; filter: alpha(opacity=80); background-image:url(img/toast_bg.png);";
+	    document.body.appendChild(m);
+		setTimeout(function() {
+			var d = 0.5;
+	        m.style.webkitTransition = '-webkit-transform ' + d + 's ease-in, opacity ' + d + 's ease-in';
+	        m.style.opacity = '0';
+			setTimeout(function() { document.body.removeChild(m) }, d * 1000);
+		}, duration);
+	}
+	
+	
+</script>

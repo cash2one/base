@@ -1,0 +1,478 @@
+import json
+
+from flask import request
+from flask import Response
+from flask.helpers import make_response
+
+from app import app
+from .BarCodeObject import BarCode
+from .UserLogin import SendVerifyCode, VerifyLogin, BindingLicense, UserInfo, UserParkHistroy, UserCoupon, MyUserOrder, \
+    GetBill, GetImage, UserInvoice
+from .WechatTools import WechatTools
+from .logger import *
+
+try:
+    import xml.etree.cElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
+
+
+from bson.objectid import ObjectId
+from mongoengine import GridFSProxy
+
+mWechatTools = WechatTools()
+mBarCode = BarCode()
+mSendVerifyCode = SendVerifyCode()
+mVerifyLogin = VerifyLogin()
+mBindingLicense = BindingLicense()
+mUserInfo = UserInfo()
+mUserParkHistroy = UserParkHistroy()
+mUserCoupon = UserCoupon()
+mMyUserOrder = MyUserOrder()
+mGetBill = GetBill()
+mGetImage = GetImage()
+mUserInvoice = UserInvoice()
+
+@app.route('/wechat/testtoken', methods=['GET','POST'])
+def checkToken():
+    signature = request.args.get('signature','')
+    timestamp = request.args.get('timestamp','')
+    nonce = request.args.get('nonce','')
+    echoStr = request.args.get('echostr','')
+    return echoStr
+
+
+@app.route('/wechat/test', methods=['GET', 'POST'])
+def test():
+
+    respData = {'msg': "Test"}
+    return setRespData(respData)
+
+
+@app.route('/wechat/get_public', methods=['GET', 'POST'])
+def get_public():
+    titleId = request.form.get('titleId')
+    respData = mWechatTools.getWechatName(titleId)
+    return setRespData(respData)
+
+
+# 获取支付回调页面的url
+@app.route('/wechat/wxpayAction', methods=['GET', 'POST'])
+def wxpayAction():
+    try:
+        rec = request.stream.read()
+        xml_rec = ET.fromstring(rec)
+        return_code = xml_rec.find('return_code').text
+        # return_code = request.form.get('return_code')
+        out_trade_no = ""
+        sign = ""
+        cash_fee = ""
+
+        if (return_code == "SUCCESS"):
+            out_trade_no = xml_rec.find('out_trade_no').text
+            # sign = xml_rec.find('sign').text
+            # cash_fee = xml_rec.find('cash_fee').text
+            # out_trade_no  = request.form.get('out_trade_no')
+            # sign = request.form.get('sign')
+
+        respData = mWechatTools.wechatCallback(return_code, out_trade_no)
+        return Response(respData, mimetype='text/xml')
+    except Exception as e:
+        logging.exception(e)
+        return Response('', mimetype='text/xml')
+
+
+# 验证公众号授权数字签名
+@app.route('/wechat/checkSign', methods=['GET', 'POST'])
+def checkSign():
+    respData = {'result': True}
+    try:
+        system = request.form.get('system')
+        user = request.form.get('user')
+        ts = request.form.get('ts')
+        sign = request.form.get('sign')
+        msg = request.form.get('msg')
+        obj = {'system': system, 'user': user, 'ts': ts, 'msg': msg}
+        wechatTools = WechatTools()
+        cytelSign = wechatTools.getCytelSign(obj)
+        if cytelSign != sign:
+            respData = {'result': False}
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# first step:获取授权页面url，request from getWechatCode.html
+# 获取授权回调页面的url
+@app.route('/wechat/getAuthUrl', methods=['GET', 'POST'])
+def getAuthUrl():
+    authUrl = ''
+    try:
+        redirectIndex = request.form.get('redirect')
+        appid = request.form.get('appid')
+        scope = request.form.get('scope')
+        strscope = 'snsapi_userinfo'
+        if scope == '0':
+            strscope = 'snsapi_base'
+        authUrl = mWechatTools.createOauthUrlForCode(redirectIndex, appid, strscope)
+    except Exception as e:
+        logging.exception(e)
+    respData = {'authUrl': authUrl}
+    return setRespData(respData)
+
+
+# 二维码获取授权回调页面的url
+@app.route('/wechat/getAuthUrlWithId', methods=['GET', 'POST'])
+def getAuthUrlWithId():
+    respData = {}
+    try:
+        id = request.form.get('id')
+        appid = request.form.get('appid')
+        scope = request.form.get('scope')
+
+        strscope = 'snsapi_userinfo'
+        if scope == '0':
+            strscope = 'snsapi_base'
+        authUrl = mWechatTools.createOauthUrlForCodeById(id, appid, strscope)
+        respData = {'authUrl': authUrl}
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# 通过微信的code，来换取微信的openid
+@app.route('/wechat/getOpenId', methods=['GET', 'POST'])
+def getOpenId():
+    respData = {}
+    try:
+        code = request.form.get('code')
+        # openId      = mWechatTools.getOpenId (code)
+        # respData    = {'openId':openId}
+        appid = request.form.get('appid')
+        respData = mWechatTools.getOpenIdAndNickName(code, appid)
+        mUserInfo.createUser(respData)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# second step:获取微信配置信息
+# 获取微信相应的config信息
+@app.route('/weixin/get_token', methods=['GET', 'POST'])
+def get_token():
+    respData = {}
+    try:
+        cur_url = request.form.get('myurl')
+        code = request.form.get('code')
+        appid = request.form.get('appid')
+
+
+        mWechatToken = mWechatTools.getWechatTokenFromDB(appid)
+        signature = mWechatTools.getSignWithoutKey(mWechatToken.ticket, mWechatToken.noncestr, mWechatToken.timestamp,
+                                                   cur_url)
+        respData = {'noncestr': mWechatToken.noncestr, 'timestamp': mWechatToken.timestamp, 'signature': signature,
+                    'cur_url': cur_url}
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# 上传ticket number相关内容，然后返回相应的微信支付所需要的字段内容
+@app.route('/wechat/wechatPay', methods=['GET', 'POST'])
+def wechatPay():
+    respData = {}
+    try:
+        Seq = request.form.get('Seq')
+        Ticket = request.form.get('Ticket')
+        lpn = request.form.get('lpn')
+        parkId = request.form.get('parkId')
+        payway = request.form.get('payway')  # 0车票支付 1车牌支付
+        Time = request.form.get('Time')
+        Entry = request.form.get('Entry')
+        PaymentNr = request.form.get('PaymentNr')
+        Discount = request.form.get('Discount')
+        QuitTime = request.form.get('QuitTime')
+        Price = request.form.get('Price')
+        chooseCouponId = request.form.get('chooseCouponId')
+
+        ip = str(request.remote_addr)
+        openId = request.form.get('openId')
+        nickName = request.form.get('nickName')
+        ActualPrice = request.form.get('ActualPrice')
+        appid = request.form.get('appid')
+        thirdOpenId = request.form.get('thirdOpenId')
+        logging.debug('wechatPay:{0} {1} {2} {3} {4} {5} {6}'.format(Seq, Ticket, lpn, parkId, payway, Price, ActualPrice))
+        finish = mMyUserOrder.saveUserOrder(Ticket, nickName, openId, Seq, Time, Entry, PaymentNr, Discount, Price,
+                                            QuitTime, chooseCouponId, ActualPrice, thirdOpenId, parkId, lpn, payway)
+
+        if (finish == True):
+            respData = mWechatTools.getWechatPayInfo(str(int(float(ActualPrice) * 100)), openId, str(ip), Ticket, Time,
+                                                     QuitTime, Seq, chooseCouponId, appid, lpn, payway, parkId)
+        else:
+            respData = mMyUserOrder.paySuccessWithZero(openId, Ticket, chooseCouponId, Seq, Price, parkId, lpn, payway)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+@app.route('/wechat/wechatPaySuccess', methods=['GET', 'POST'])
+def wechatPaySuccess():
+    respData = {}
+    try:
+        Ticket = request.form.get('Ticket')
+        openId = request.form.get('openId')
+        chooseCouponId = request.form.get('chooseCouponId')
+
+        respData = mMyUserOrder.paySuccess(openId, Ticket, chooseCouponId)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+# 发票功能设置
+@app.route('/invoice/get_invoice_setting', methods=['GET', 'POST'])
+def get_invoice_setting():
+    respData = {}
+    try:
+        parkId = request.form.get('parkId')
+        respData = mUserInvoice.getInvoiceSetting(parkId)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+# 上传二维码id，然后返回相应的价格
+@app.route('/user/get_id', methods=['GET', 'POST'])
+def get_id():
+    respData = {}
+    try:
+        myIdData = request.form.get('myIdData')
+        respData = mBarCode.decryptCode(myIdData)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# 上传ticket number，然后返回相应的价格
+@app.route('/user/update_ticket', methods=['GET', 'POST'])
+def update_ticket():
+    getCode = {}
+    try:
+        ticket = request.form.get('ticket')
+        appid = request.form.get('appid')
+        openId = request.form.get('openId')
+        logging.debug('update_ticket:' + ticket + ' ' + openId)
+        getCode = mBarCode.getBarcode(ticket, appid, openId)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(getCode)
+
+# 上传lpn number，然后返回相应的价格
+@app.route('/user/update_lpn', methods=['GET', 'POST'])
+def update_lpn():
+    getCode = {}
+    try:
+        lpn = request.form.get('lpn')
+        appid = request.form.get('appid')
+        openId = request.form.get('openId')
+        parkId = request.form.get('parkId')
+        logging.debug('update_lpn:' + lpn + ' ' + parkId + ' ' + openId)
+        getCode = mBarCode.getBarcodeByLPN(lpn, appid, openId, parkId)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(getCode)
+
+# 上传ticket number，然后返回相应的价格
+@app.route('/user/update_decrypt_ticket', methods=['GET', 'POST'])
+def update_decrypt_ticket():
+    getCode = {}
+    try:
+        myTicketData = request.form.get('myTicketData')
+        ticket = mBarCode.decryptCodeToTicket(myTicketData)
+        appid = request.form.get('appid')
+        openId = request.form.get('openId')
+        getCode = mBarCode.getBarcode(ticket, appid, openId)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(getCode)
+
+
+# 获取短信验证码接口
+@app.route('/user/get_verify_code', methods=['GET', 'POST'])
+def get_verify_code():
+    respData = {}
+    try:
+        phone = request.form.get('phone')
+        openId = request.form.get('openId')
+        nickname = request.form.get('nickname')
+        respData = mSendVerifyCode.send(phone, openId, nickname)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# 验证码登陆
+@app.route('/user/verify_login', methods=['GET', 'POST'])
+def verify_login():
+    respData = {}
+    try:
+        phone = request.form.get('phone')
+        verify = request.form.get('verify')
+        openId = request.form.get('openId')
+        respData = mVerifyLogin.login(phone, verify, openId)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# 绑定车牌
+@app.route('/user/binding_license', methods=['GET', 'POST'])
+def binding_license():
+    respData = {}
+    try:
+        license = request.form.get('license')
+        openId = request.form.get('openId')
+        respData = mBindingLicense.binding(openId, license)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# 获取用户信息
+@app.route('/user/get_user_info', methods=['GET', 'POST'])
+def get_user_info():
+    respData = {}
+    try:
+        openId = request.form.get('openId')
+        respData = mUserInfo.getUserInfo(openId)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# 获取用户付费信息
+@app.route('/user/get_user_park_histroy', methods=['GET', 'POST'])
+def get_user_park_histroy():
+    respData = {}
+    try:
+        openId = request.form.get('openId')
+        respData = mUserParkHistroy.getUserParkHistroy(openId)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# 获取用户优惠券列表
+@app.route('/user/get_user_coupon', methods=['GET', 'POST'])
+def get_user_coupon():
+    respData = {}
+    try:
+        openId = request.form.get('openId')
+        respData = mUserCoupon.getUserCoupon(openId)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# 用户获取可用优惠券列用于抵扣
+@app.route('/user/get_user_coupon_use', methods=['GET', 'POST'])
+def get_user_coupon_use():
+    respData = {}
+    try:
+        openId = request.form.get('openId')
+        restrictType = request.form.get('restrictType')
+        ticket = request.form.get('ticket')
+        lpn = request.form.get('lpn')
+        payway = request.form.get('payway')
+        parkId = request.form.get('parkId')
+        nr = request.form.get('nr')
+        logging.debug('get_user_coupon_use:{0}-{1}-{2}-{3}-{4}-{5}'.format(openId, ticket, lpn, payway, parkId, nr))
+        respData = mUserCoupon.getUserCouponUse(openId, ticket, lpn, payway, parkId, nr)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+# 用户获取优惠券
+@app.route('/user/get_coupon', methods=['GET', 'POST'])
+def get_coupon():
+    respData = {}
+    try:
+        openId = request.form.get('openId')
+        #couponId = request.form.get('couponId')
+        subCode = request.form.get('subCode')
+        respData = mUserCoupon.addUserCoupon(subCode, openId)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+@app.route('/user/get_bill', methods=['GET', 'POST'])
+def get_bill():
+    respData = {}
+    try:
+        openId = request.form.get('openId')
+        seq = request.form.get('seq')
+        code = request.form.get('code')
+        respData = mGetBill.getBillByCode(openId, seq, code)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+@app.route('/user/getBillPrice', methods=['GET', 'POST'])
+def getBillPrice():
+    respData = {}
+    try:
+        seq = request.form.get('seq')
+        respData = mGetBill.getBillPriceByCode(seq)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+@app.route('/user/get_QuiteTime', methods=['GET', 'POST'])
+def get_QuiteTime():
+    respData = {}
+    try:
+        seq = request.form.get('seq')
+        ticket = request.form.get('ticket')
+        # lpn = request.form.get('lpn')
+        parkId = request.form.get('parkId')
+        # openId = request.form.get('openId')
+        payway = request.form.get('payway')
+        if payway == 0:
+            parkId = ticket[0:4]
+        respData = mMyUserOrder.getQuiteTime(seq=seq, parkId=parkId)
+    except Exception as e:
+        logging.exception(e)
+    return setRespData(respData)
+
+
+
+
+@app.route('/image/<ticket>')
+def getImageIdByTicket (ticket):
+    return mGetImage.getImageIdByTicket(ticket)
+
+@app.route('/logo/<parkId>')
+def getImageIdByParkId (parkId):
+    return mGetImage.getImageIdByParkId(parkId)
+
+@app.route('/img/<oid>')
+def get_image(oid=None):
+    if oid:
+        proxy = GridFSProxy(grid_id=ObjectId(oid), collection_name='images')
+        return Response(proxy.read(), mimetype='image/jpeg')
+    else:
+        return ''
+    
+    
+# 封装返回数据
+def setRespData(respData):
+    headers = {"Access-Control-Allow-Origin": "*"}
+    respDataJson = json.dumps(respData)
+    resp = make_response(respDataJson, 200, headers)
+    return resp
+
+
+
+

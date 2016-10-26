@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+	<title>停车缴费</title>
+	<script src="/bower_components/jquery/dist/jquery.min.js"></script>
+	<script src="/bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+	<link href="/bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body style="margin: 10px;">
+	
+	<div id="container" >
+		<div id="content_body" >
+			<div style="margin:0 auto;text-align:center;margin-top: 10px;margin-bottom: 10px;">
+				<img id = "logo"  width="165" height="60" hidden="hidden" style="margin-bottom: 20px;" /> 
+				<h3 id = "parkname" style="margin: 0px; font-size: 20px;" >{{getCode['ParkName']}}</h3>
+				<h3 style="margin: 0px; font-size: 20px;">欢迎您</h3>
+			</div>
+			
+			<hr style="height:3px;border:none;border-top:3px ridge grey;" />
+
+			<p style="margin-top: 10px;margin-bottom: 0px;">停车票号:<label id = "myTicket" style="margin-top: 10px;margin-bottom: 0px;">{{getCode['Ticket']}}</label></p>
+			<p id="Ticket" style="margin-top: 0px;"></p>
+			
+			<p style="margin-top: 5px;margin-bottom: 0px;">进场时间:{{getCode['Entry']}}</p>
+			<p id="Entry" style="margin-top: 0px;"></p>
+			
+			<p style="margin-top: 5px;margin-bottom: 0px;">缴费时间:{{getCode['QuitTime']}}</p>
+			<p id="PayTime" style="margin-top: 0px;"></p>
+			
+			<div class="text" style="margin-top: 5px;margin-bottom: 0px;">
+				停车时长:<span id="Duration" span class="text" style=" text-align:center;">{{getCode['Time']}}</span>
+			</div>
+			
+			<div class="text" style="margin-top: 5px;margin-bottom: 0px;">
+				停车费用:<span id="Cost" class="text" style=" text-align:center;" >{{getCode['Price']}}</span>
+			</div>
+			
+			<div id="div_Discount" class="text" style="margin-top: 5px;margin-bottom: 0px;">
+				优惠折扣:<span id="Discount" class="text" style=" text-align:center;" >{{getCode['Discount']}}</span>
+			</div>
+			
+			<div class="text" style="margin-top: 5px;margin-bottom: 0px;color: #cf2a27;">
+				费用合计:<span id="ActualCost" class="text" style=" text-align:center;" ></span>
+			</div>
+			
+			
+			<form method ="post"  action="" id = "postForm">  
+		        <input id="code" type="text" name="code" value="{{out_trade_no}}" hidden="hidden"/>
+		        <input id="time" type="text" name="time" value="60" hidden="hidden"/>
+		        <div style="margin:0 auto;text-align:center;margin-top: 20px;">
+					<button type="submit" class="btn btn-primary btn-lg" style="width: 100%;font-size: 18px;color: #ffffff;">支付宝支付</button>
+				</div>
+			</form>  
+		</div>
+		<div id="footing" style="text-align:center;">
+			Powered by: <img src="/static/image/logo.png" width="30" height="12" /> Copyright ©2016
+		</div>
+	</div>
+	<style type="text/css">
+
+        #footing{position: fixed; left: 0; bottom: 0; width: 100%;}
+        @media screen and (max-height:400px){
+            #footing{position: relative;}
+        }
+
+    </style>
+</body>
+
+
+<script>
+
+	
+	var InterValObj; //timer变量，控制时间
+	var count = 10*1; //间隔函数，1秒执行
+	var curCount = count;//当前剩余秒数
+	
+	init ();
+	function init ()
+	{
+		var content_body = document.getElementById("content_body");
+		var footingHeight = document.getElementById("footing").offsetHeight;
+{#		content_body.style.height=(window.innerHeight - footingHeight - content_body.getBoundingClientRect().top - 5)+"px";#}
+		
+		InterValObj = window.setInterval(SetRemainTime, 1000); //启动计时器，1秒执行一次
+		
+		setData ();
+		
+	}
+	
+	//timer处理函数
+	function SetRemainTime() 
+	{
+		if (curCount == 0) 
+		{
+			window.clearInterval(InterValObj);//停止计时器
+			
+			document.getElementById("time").value = "0";
+		}
+		else 
+		{
+			curCount--;
+		}
+	};
+	
+	function setData ()
+	{
+		var Duration = document.getElementById("Duration");
+		Duration.innerText = formatSeconds(Duration.innerText);
+		
+		var Cost = document.getElementById("Cost");
+		var Discount = document.getElementById("Discount");
+		var div_Discount = document.getElementById("div_Discount");
+		if (parseFloat(Discount.innerText) <= 0.0)
+		{
+			div_Discount.hidden = true;
+		}
+		else 
+		{
+			div_Discount.hidden = false;
+		}
+		
+		var ActualCost = document.getElementById("ActualCost");
+		ActualCost.innerText = parseFloat(Cost.innerText)-parseFloat(Discount.innerText);
+		
+		
+		var get_ticket = document.getElementById("myTicket").innerText;
+		var newTicker = get_ticket.split(".");
+		try{
+			document.getElementById("myTicket").innerText = newTicker[1]+"."+newTicker[2]+"."+newTicker[0];
+		}catch(e){
+			//TODO handle the exception
+		}
+		
+		var logo = document.getElementById("logo");
+		logo.hidden = false;
+		logo.src = "http://139.196.106.245:5000/image/"+get_ticket;
+//		logo.src = "http://192.168.1.153:5000/image/0218.1221.1223";
+	};
+	
+	document.getElementById("pay_btn").onclick = function ()
+	{
+		alert("订单超时，请重新扫描");
+	};
+	
+	
+	
+	function formatSeconds(value) 
+	{
+	    var theTime = parseInt(value);// 秒
+	    var theTime1 = 0;// 分
+	    var theTime2 = 0;// 小时
+	    if(theTime > 60) 
+	    {
+	        theTime1 = parseInt(theTime/60);
+	        theTime = parseInt(theTime%60);
+	        if(theTime1 > 60) 
+	        {
+	            theTime2 = parseInt(theTime1/60);
+	            theTime1 = parseInt(theTime1%60);
+	        }
+	    }
+	    var result = "";
+	    //var result = ""+parseInt(theTime)+"秒";
+	    if(theTime1 > 0) {
+	        result = ""+parseInt(theTime1)+"分钟"+result;
+	    }
+	    if(theTime2 > 0) {
+	        result = ""+parseInt(theTime2)+"小时"+result;
+	    }
+	    else 
+	    {
+	    		result = "0小时"+result;
+	    }
+	    return result;
+	}
+
+
+	
+</script>

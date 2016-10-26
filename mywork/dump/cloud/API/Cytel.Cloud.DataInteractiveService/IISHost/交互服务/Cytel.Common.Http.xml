@@ -1,0 +1,599 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Cytel.Common.Http</name>
+    </assembly>
+    <members>
+        <member name="T:Cytel.Common.Http.HttpHelper">
+            <summary>
+            Class HttpHelper.
+            </summary>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpHelper.GetHttpRequestData(Cytel.Common.Http.HttpRequestParam)">
+            <summary>
+            Gets the HTTP request data.
+            </summary>
+            <param name="param">The parameter.</param>
+            <returns>HttpResult.</returns>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpHelper.SetHeaderValue(System.Net.WebHeaderCollection,System.String,System.String)">
+            <summary>
+            Sets the header value.
+            </summary>
+            <param name="header">The header.</param>
+            <param name="name">The name.</param>
+            <param name="value">The value.</param>
+        </member>
+        <member name="T:Cytel.Common.Http.HttpInstance">
+            <summary>
+            Http连接操作帮助类
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpInstance.request">
+            <summary>
+            HttpWebRequest对象用来发起请求
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpInstance.response">
+            <summary>
+            获取影响流的数据对象
+            </summary>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.GetHttpRequestData(Cytel.Common.Http.HttpRequestParam)">
+            <summary>
+            根据传入的参数，得到相应Http请求数据（唯一公开方法）
+            </summary>
+            <param name="item">参数类对象</param>
+            <returns>返回HttpResult类型</returns>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.SetRequest(Cytel.Common.Http.HttpRequestParam)">
+            <summary>
+            为请求准备参数
+            </summary>
+            <param name="item">参数列表</param>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.SetCert(Cytel.Common.Http.HttpRequestParam)">
+            <summary>
+            设置证书
+            </summary>
+            <param name="item">The item.</param>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.SetCookie(Cytel.Common.Http.HttpRequestParam)">
+            <summary>
+            设置Cookie
+            </summary>
+            <param name="item">The item.</param>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.SetPostData(Cytel.Common.Http.HttpRequestParam)">
+            <summary>
+            设置Post数据
+            </summary>
+            <param name="item">Http参数</param>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.SetProxy(Cytel.Common.Http.HttpRequestParam)">
+            <summary>
+            设置代理
+            </summary>
+            <param name="item">参数对象</param>
+            <exception cref="T:System.ArgumentException">使用代理必须传入ProxyIP;ProxyIP</exception>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.GetData(Cytel.Common.Http.HttpRequestParam,Cytel.Common.Http.HttpResult)">
+            <summary>
+            获取数据的并解析的方法
+            </summary>
+            <param name="item">The item.</param>
+            <param name="result">The result.</param>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.ProcessCookies(System.String,System.String)">
+            <summary>
+            设置cookie
+            </summary>
+            <param name="cookies">cookie</param>
+            <param name="setCookies">setCookies</param>
+            <returns>新cookie</returns>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.SetEncoding(Cytel.Common.Http.HttpRequestParam,Cytel.Common.Http.HttpResult,System.Byte[])">
+            <summary>
+            设置编码
+            </summary>
+            <param name="item">HttpItem</param>
+            <param name="result">HttpResult</param>
+            <param name="responseByte">byte[]</param>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.GetByte">
+            <summary>
+            提取网页Byte
+            </summary>
+            <returns>System.Byte[][].</returns>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.CheckValidationResult(System.Object,System.Security.Cryptography.X509Certificates.X509Certificate,System.Security.Cryptography.X509Certificates.X509Chain,System.Net.Security.SslPolicyErrors)">
+            <summary>
+            回调验证证书问题
+            </summary>
+            <param name="sender">sender</param>
+            <param name="certificate">certificate</param>
+            <param name="chain">chain</param>
+            <param name="errors">errors</param>
+            <returns>true</returns>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.GetRequestInfo(Cytel.Common.Http.HttpRequestParam)">
+            <summary>
+            获取请求信息（记录交互日志用）
+            </summary>
+            <param name="request">请求对象</param>
+            <returns>请求信息字符串</returns>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.GetRequestProxy(Cytel.Common.Http.HttpRequestParam)">
+            <summary>
+            获取请求使用的代理IP
+            </summary>
+            <param name="item">请求参数</param>
+            <returns>请求使用的代理IP</returns>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpInstance.AbortRequest">
+            <summary>
+            中止请求，释放连接
+            </summary>
+        </member>
+        <member name="T:Cytel.Common.Http.HttpRequestParam">
+            <summary>  
+            Http请求参数类  
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.url">
+            <summary>  
+            请求URL(必填)  
+            </summary> 
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.method">
+            <summary>  
+            请求方式(默认为GET方式,当为POST方式时必须设置Postdata的值) 
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.timeout">
+            <summary>  
+            请求超时时间(以毫秒为单位，默认30秒)  
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.readWriteTimeout">
+            <summary>  
+            写入Post数据超时间(以毫秒为单位，默认180秒) 
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.keepAlive">
+            <summary>  
+            是否与Internet资源建立持久性连接(默认true) 
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.accept">
+            <summary>  
+            请求标头值(默认text/html, application/xhtml+xml, */*)  
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.contentType">
+            <summary>  
+            请求返回类型(默认text/html)
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.userAgent">
+            <summary>  
+            客户端访问信息(默认Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0))  
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.encoding">
+            <summary>  
+            返回数据编码(默认为null,可以自动识别,一般为utf-8,gbk,gb2312)
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.postDataType">
+            <summary>  
+            Post的数据类型(默认string)
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.postdata">
+            <summary>  
+            Post请求时要发送的字符串Post数据  
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.postdataByte">
+            <summary>  
+            Post请求时要发送的Byte类型的Post数据  
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.cookiecollection">
+            <summary>  
+            Cookie对象集合  
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.cookie">
+            <summary>  
+            请求时的Cookie  
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.referer">
+            <summary>  
+            来源地址，上次访问地址  
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.isIEProxy">
+            <summary>
+            是否使用IE代理，默认true即使用IE代理，此时Fiddler能抓包
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.proxyBusinessName">
+            <summary>
+            代理IP业务名称，若要使用代理，则此属性必须赋值 本类库提供2种使用代理IP的方式，1仅赋值ProxyBusinessName不赋值ProxyIP 则自动获取代理IP，但每次请求均使用随机IP 2赋值ProxyBusinessName且赋值ProxyIP，由使用方自行控制代理IP的使用及更换
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.proxyIP">
+            <summary>
+            代理IP地址
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.proxyUserName">
+            <summary>
+            代理IP用户名
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.proxyPwd">
+            <summary>
+            代理IP密码
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.allowAutoRedirect">
+            <summary>  
+            支持跳转页面，查询结果将是跳转后的页面(默认是自动跳转)
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.connectionLimit">
+            <summary>  
+            最大连接数(默认1024)
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.resultType">
+            <summary>  
+            设置返回类型String和Byte(默认string)
+            </summary>  
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.header">
+            <summary>  
+            header对象  
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.protocolVersion">
+            <summary>  
+            用于请求的HTTP版本(默认System.Net.HttpVersion.Version11)
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.expect100continue">
+            <summary>  
+            是否使用100-Continue行为。如果POST请求需要100-Continue响应，则为true；否则为false(默认false)  
+            </summary> 
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.postEncoding">
+            <summary>  
+            Post参数编码(默认Default编码) 
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.resultCookieType">
+            <summary>  
+            Cookie返回类型(默认字符串类型)
+            </summary> 
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.isWriteLog">
+            <summary>
+            是否记录交互日志
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpRequestParam.clientCertificates">
+            <summary>  
+            509证书集合  
+            </summary>  
+        </member>
+        <member name="M:Cytel.Common.Http.HttpRequestParam.#ctor">
+            <summary>
+            无参构造函数
+            </summary>
+        </member>
+        <member name="M:Cytel.Common.Http.HttpRequestParam.#ctor(System.String,System.String)">
+            <summary>
+            构造函数
+            </summary>
+            <param name="url">请求地址</param>
+            <param name="cookie">cookies</param>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.URL">
+            <summary>  
+            请求URL(必填)  
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.Method">
+            <summary>  
+            请求方式(默认为GET方式,当为POST方式时必须设置Postdata的值)
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.Timeout">
+            <summary>  
+            请求超时时间(以毫秒为单位，默认30秒)
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.ReadWriteTimeout">
+            <summary>  
+            写入Post数据超时间(以毫秒为单位，默认30秒) 
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.KeepAlive">
+            <summary>  
+             获取或设置一个值，该值指示是否与Internet资源建立持久性连接(默认true)
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.Accept">
+            <summary>  
+            请求标头值(默认text/html, application/xhtml+xml, */*)  
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.ContentType">
+            <summary>  
+            请求返回类型(默认text/html)
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.UserAgent">
+            <summary>  
+            客户端访问信息(默认Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0))
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.Encoding">
+            <summary>  
+            返回数据编码(默认为null,可以自动识别,一般为utf-8,gbk,gb2312)
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.PostDataType">
+            <summary>  
+            Post的数据类型(默认string)
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.Postdata">
+            <summary>  
+            Post请求时要发送的字符串Post数据  
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.PostdataByte">
+            <summary>  
+            Post请求时要发送的Byte类型的Post数据  
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.CookieCollection">
+            <summary>  
+            Cookie对象集合  
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.Cookie">
+            <summary>  
+            请求时的Cookie  
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.Referer">
+            <summary>  
+            来源地址，上次访问地址  
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.IsIEProxy">
+            <summary>
+            是否使用IE代理，默认false即不使用IE代理，此时Fiddler无法抓包
+            </summary>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.ProxyBusinessName">
+            <summary>
+            代理IP业务名称，若要使用代理，则此属性必须赋值 本类库提供2种使用代理IP的方式，1仅赋值ProxyBusinessName不赋值ProxyIP 则自动获取代理IP，但每次请求均使用随机IP 2赋值ProxyBusinessName且赋值ProxyIP，由使用方自行控制代理IP的使用及更换
+            </summary>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.ProxyIP">
+            <summary>
+            代理IP地址
+            </summary>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.ProxyUserName">
+            <summary>
+            代理IP用户名
+            </summary>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.ProxyPwd">
+            <summary>
+            代理IP密码
+            </summary>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.AllowAutoRedirect">
+            <summary>  
+            支持跳转页面，查询结果将是跳转后的页面(默认是自动跳转)
+            </summary>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.ConnectionLimit">
+            <summary>  
+            最大连接数(默认1024)
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.ResultType">
+            <summary>  
+            设置返回类型String和Byte(默认string)
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.Header">
+            <summary>  
+            header对象  
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.ProtocolVersion">
+            <summary>  
+            用于请求的HTTP版本(默认System.Net.HttpVersion.Version11)
+            </summary>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.Expect100Continue">
+            <summary>  
+            获取或设置一个System.Boolean值，该值确定是否使用100-Continue行为。如果POST请求需要100-Continue响应，则为true；否则为false(默认false)
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.PostEncoding">
+            <summary>  
+            Post参数编码(默认Default编码) 
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.ResultCookieType">
+            <summary>  
+            Cookie返回类型(默认字符串类型)
+            </summary>  
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.IsWriteLog">
+            <summary>
+            是否记录交互日志
+            </summary>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpRequestParam.ClientCertificates">
+            <summary>  
+            设置509证书集合  
+            </summary>  
+        </member>
+        <member name="T:Cytel.Common.Http.HttpResult">
+            <summary>
+            Class HttpResult.
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpResult.cookie">
+            <summary>
+            The cookie
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpResult.cookieCollection">
+            <summary>
+            The cookie collection
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpResult.html">
+            <summary>
+            The HTML
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpResult.resultByte">
+            <summary>
+            The result byte
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpResult.header">
+            <summary>
+            The header
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpResult.statusDescription">
+            <summary>
+            The status description
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpResult.statusCode">
+            <summary>
+            The status code
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.HttpResult.responseUrl">
+            <summary>
+            重定向路径
+            </summary>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpResult.Cookie">
+            <summary>
+            Http请求返回的Cookie
+            </summary>
+            <value>The cookie.</value>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpResult.CookieCollection">
+            <summary>
+            Cookie对象集合
+            </summary>
+            <value>The cookie collection.</value>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpResult.Html">
+            <summary>
+            返回的String类型数据 只有ResultType.String时才返回数据，其它情况为空
+            </summary>
+            <value>The HTML.</value>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpResult.ResultByte">
+            <summary>
+            返回的Byte数组 只有ResultType.Byte时才返回数据，其它情况为空
+            </summary>
+            <value>The result byte.</value>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpResult.Header">
+            <summary>
+            header对象
+            </summary>
+            <value>The header.</value>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpResult.StatusDescription">
+            <summary>
+            返回状态说明
+            </summary>
+            <value>The status description.</value>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpResult.StatusCode">
+            <summary>
+            返回状态码,默认为OK
+            </summary>
+            <value>The status code.</value>
+        </member>
+        <member name="P:Cytel.Common.Http.HttpResult.ResponseUrl">
+            <summary>
+            重定向路径
+            </summary>
+            <value>The response URL.</value>
+        </member>
+        <member name="T:Cytel.Common.Http.PostDataType">
+            <summary>
+            Post的数据格式默认为string
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.PostDataType.String">
+            <summary>
+            字符串类型，这时编码Encoding可不设置
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.PostDataType.Byte">
+            <summary>
+            Byte类型，需要设置PostdataByte参数的值编码Encoding可设置为空
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.PostDataType.FilePath">
+            <summary>
+            传文件，Postdata必须设置为文件的绝对路径，必须设置Encoding的值
+            </summary>
+        </member>
+        <member name="T:Cytel.Common.Http.ResultCookieType">
+            <summary>
+            Cookie返回类型
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.ResultCookieType.String">
+            <summary>
+            只返回字符串类型的Cookie
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.ResultCookieType.CookieCollection">
+            <summary>
+            CookieCollection格式的Cookie集合同时也返回String类型的cookie
+            </summary>
+        </member>
+        <member name="T:Cytel.Common.Http.ResultType">
+            <summary>
+            返回类型
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.ResultType.String">
+            <summary>
+            表示只返回字符串 只有Html有数据
+            </summary>
+        </member>
+        <member name="F:Cytel.Common.Http.ResultType.Byte">
+            <summary>
+            表示返回字符串和字节流 ResultByte和Html都有数据返回
+            </summary>
+        </member>
+    </members>
+</doc>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+    <title>授权</title>
+    <script src="js/jquery.min.js"></script>
+    <script src="bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="https://res.wx.qq.com/open/js/jweixin-1.0.0.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/MyJSTools.js"></script>
+    <link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link type="text/css" href="css/ParkingCSS.css" rel="stylesheet"/>
+</head>
+<body>
+<div id="container">
+    <div id="content_body">
+    </div id="container" >
+</div id="content_body" >
+
+</body>
+</html>
+
+<script src="https://res.wx.qq.com/open/js/jweixin-1.0.0.js"></script>
+<script>
+	var openId = window.localStorage.getItem(my_appid+"openId");
+	var scope =  window.localStorage.getItem("scope");
+	var payway = 0;
+	var system = GetQueryString('system');
+    init();
+    function init() {
+        var id = getQueryStr("id", "");
+		var syscolor = '#' + getQueryStr('syscolor', '337ab7');
+		var scope = getQueryStr('scope', 1);
+		// 停车场ID
+		window.localStorage.setItem('system',system);
+		// 按钮颜色
+		window.localStorage.setItem('syscolor',syscolor);
+		// 授权作用域
+		window.localStorage.setItem('scope', scope);
+        $.post(my_ip_address + "/user/get_id", {'myIdData': id}, function (data) {
+            data = eval("(" + data + ")");
+            if (data.code == RESULT_SUCCESS) {
+				payway = data.payway;
+				window.localStorage.setItem("payway", payway);
+                if (isWeiXin()) {
+                    initOpenId(data.id);
+                }
+                else {
+					if(payway == 1){
+						var lpn = data.id.toUpperCase().substr(1);
+						window.location.href = my_ip_address + "/subin/pay/subinPaylpn?lpn=" + lpn + "&parkId=" + system;
+					}
+					else{
+						window.location.href = my_ip_address + "/subin/pay/" + data.id;
+					}
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+        });
+
+
+//		var ticket = getQueryStr("ticket","");
+//		if (isWeiXin())
+//		{
+//			initOpenId (ticket);
+//		}
+//		else 
+//		{
+//			window.location.href = "http://139.196.106.245:5000/subin/pay/"+ticket; 
+//		}
+    }
+
+    function isWeiXin() {
+        var ua = window.navigator.userAgent.toLowerCase();
+        if (ua.match(/MicroMessenger/i) == 'micromessenger') {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    function initOpenId(id) {
+        if (!openId || openId == null || openId.length <= 0) {//如果没有openId，就请求授权url,并且跳转到授权页面
+            $.post(my_ip_address + "/wechat/getAuthUrlWithId", {
+                'id': id,
+                'appid': my_appid,
+				'scope': scope
+            }, function (data) {
+                data = eval("(" + data + ")");
+                window.location.href = data.authUrl;
+            });
+        }
+        else {//如果有openId，那么直接跳转页
+			if (payway == 1){
+				updateLpn(id.substr(1));
+			}
+            else{
+				updateTicket(id);
+			}
+        }
+    }
+    ;
+
+    function updateTicket(ticket) {
+        $.post(my_ip_address + "/user/update_ticket", {'ticket': ticket,'appid':my_appid, 'openId': openId}, function (data) {
+            data = eval("(" + data + ")");
+            if (data.code == 0) {
+                alert(data.msg);
+            }
+            else if (data.code == 1) {
+                var url = 'ParkingChoosePayCharge.html?Seq=' + data.Seq +
+                        '&Price=' + data.Price +
+                        '&Ticket=' + data.Ticket +
+                        '&Time=' + data.Time +
+                        '&Entry=' + data.Entry +
+                        '&PaymentNr=' + data.PaymentNr +
+                        '&Discount=' + data.Discount +
+                        '&QuitTime=' + data.QuitTime ;
+//                '&ParkName=' + data.ParkName;
+                        window.localStorage.setItem('sendParkName',data.ParkName);
+						window.localStorage.setItem('sendNote',data.note);
+                window.location.href = url;
+            }
+        });
+    }
+	
+	function updateLpn(myLpn) {
+		var openId = window.localStorage.getItem(my_appid+"openId");
+		if (!openId)
+			checkOpenId();
+		$.post(my_ip_address+"/user/update_lpn", {'lpn' : myLpn,'appid':my_appid, 'openId': openId, 'parkId': system}, function(data)
+			{
+				data = eval("("+data+")");
+				if (data.code == RESULT_ERROR)
+				{
+					alert(data.msg);
+					wx.closeWindow();
+				}
+				else if (data.code == RESULT_SUCCESS)
+				{
+					var url = 'ParkingChoosePayCharge.html?Seq=' + data.Seq +
+                            '&Price=' + data.Price +
+                            '&Lpn=' + data.Lpn +
+                            '&Time=' + data.Time +
+                            '&Entry=' + data.Entry +
+                            '&PaymentNr=' + data.PaymentNr +
+                            '&Discount=' + data.Discount +
+                            '&QuitTime=' + data.QuitTime;
+						window.localStorage.setItem('sendParkName',data.ParkName);
+						window.localStorage.setItem('sendNote',data.note);
+                    window.location.href = url;
+				}
+			});
+	}
+
+    function getQueryStr(str, noValue) {
+        var reg = new RegExp("(^|&)" + str + "=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r != null)
+            return unescape(r[2]);
+        return noValue;
+    }
+    ;
+
+</script>

@@ -1,0 +1,13 @@
+# coding: utf-8
+from .default import Config
+
+
+class TestingConfig(Config):
+    # App config
+    TESTING = True
+
+    #部署地址,fabric用
+    GIT_ADDRESS = "http://subin@stash.hongfu001.com:7990/scm/park/parkserver.git"
+    HOST_STRING = "root@192.168.1.8:22"
+    HOST_KEY_FILENAME = "~/.ssh/id_rsa"
+

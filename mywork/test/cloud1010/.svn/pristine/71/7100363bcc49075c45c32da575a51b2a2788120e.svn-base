@@ -1,0 +1,33 @@
+#速宾停车系统说明
+
+自动产品部署命令
+---
+先安装fabric3(支持python3的版本)
+
+    pip install fabric3
+
+第一次部署需要在根目录运行:
+
+    fab prod_deploy_first
+
+该操作耗时较长.
+
+之后如更新代码,可运行
+
+    fab prod_update
+
+服务器会自动更新代码并重启
+
+自动测试部署命令
+---
+第一次部署需要在根目录运行:
+
+    fab test_deploy_first
+
+该操作耗时较长.
+
+之后如更新代码,可运行
+
+    fab test_update
+
+即可.

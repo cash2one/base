@@ -1,0 +1,282 @@
+﻿<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+		<title>停车缴费</title>
+		
+		<script src="js/jquery.min.js"></script>
+		<script src="bootstrap/dist/js/bootstrap.min.js"></script>
+		<script src="https://res.wx.qq.com/open/js/jweixin-1.0.0.js"> </script>
+		<script src="js/config.js"></script>
+		<script src="js/MyJSTools.js"></script>
+		<link rel="stylesheet" href="css/ParkingLoadingStyle.css" />
+		<link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link type="text/css" href="css/ParkingCSS.css" rel="stylesheet" />
+	</head>
+	<body class="html_body">
+		<div id="container" >
+			<div id="content_body" >
+				<div>
+					<h4 style="margin-bottom: 15px;margin-top: 15px;">请输入您的车牌号码</h4>
+					<div class="row col-lg-6" >
+					  	<div style="margin-left: 0px;">
+					    		<div class="input-group input-group-lg">
+					    			
+					      		<div class="input-group-btn input-group-lg">
+					        			<button id="chooseCityButton" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">沪<span style="margin: 2px;" class="caret"></span></button>
+					        			<ul id='dropdown_city_menu' class="dropdown-menu dropdown-menu-left" role="menu" >
+					        			</ul>
+					      		</div>
+					      		
+					      		<div class="input-group-btn myitem">
+					        			<button id="chooseLetterButton" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 0px;">A<span style="margin: 2px;" class="caret"></span></button>
+					        			<ul id='dropdown_letter_menu' class="dropdown-menu dropdown-menu-left" role="menu" >
+					        			</ul>
+					      		</div>
+					      		
+					      		<input id="license_number" type="text" class="form-control" aria-label="..."  onkeyup="this.value = this.value.toUpperCase();">
+					    		</div><!-- /input-group -->
+					  	</div><!-- /.col-lg-6 -->
+					</div><!-- /.row -->		
+					<h4 style="margin-bottom: 15px;margin-top: 15px;" id="license">车牌号:</h4>
+				</div>
+				
+				<div style="margin:0 auto;text-align:center">
+					<button id = "submit_btn" type="button" class="btn btn-primary btn-lg" style="font-size: 18px;padding-bottom: 10px; padding-top: 10px;width: 100%;">确定</button>
+				</div>
+				
+				<div style="margin-top: 20px;">
+					<p style="margin-top: 5px;">步骤1：请直接输入车牌号</p>
+					<p style="margin-top: 5px;">步骤2：确认停车费用并支付</p>
+					<p style="margin-top: 5px;">步骤3：请在支付成功后尽快离场</p>
+				</div>
+			</div>
+			<div id="footing" style="text-align:center;">
+				 Powered by: <img id="logo" src="img/logo.png" width="30" height="12" /> Copyright ©2016
+			</div>
+		</div>
+		
+	</body>
+</html>
+
+<script type="text/javascript">
+	window.localStorage.setItem("payway", '1');
+	var system = window.localStorage.getItem('system');
+	var btn_choose_city = document.getElementById("chooseCityButton");
+	var dropdown_city_menu = document.getElementById("dropdown_city_menu");
+	var city_list = ["京","津","沪","渝","冀","晋","辽","吉","黑","苏","浙","皖","闽","赣","鲁","豫","鄂","湘","粤","琼","川","贵","云","陕","甘","青","藏","桂","蒙","宁","新"];
+	var chooseCity = "沪";
+	
+	var btn_choose_letter = document.getElementById("chooseLetterButton");
+	var dropdown_letter_menu = document.getElementById("dropdown_letter_menu");
+	var letter_list = ["A","B","C","D","E","F","G","H","J","K","L","M","N","P","Q","R","S","T","U","V","W","X","Y","Z","0"];
+	var chooseLetter = "A";
+	
+	var license = document.getElementById("license");
+	var license_number = document.getElementById("license_number");
+	
+	var btn_submit = document.getElementById("submit_btn");
+
+	
+	init ();
+	function init ()
+	{
+		
+// 		var title = window.localStorage.getItem("title");
+//		if (title != null && title.length >0)
+//		{
+//			document.title = title;
+//		}
+		
+		// 替换按钮颜色和LOGO图标
+		var syscolor = window.localStorage.getItem('syscolor');
+		if(syscolor)
+		{
+			var btnNodes = document.querySelectorAll('.btn-primary');
+			if(btnNodes)
+			{
+				for(var i=0; i < btnNodes.length; i++)
+				{
+					if(btnNodes[i])
+					{
+						btnNodes[i].style.backgroundColor = syscolor;
+						btnNodes[i].style.borderColor = syscolor;
+					}
+				}
+			}
+		}
+		
+		if(syscolor == '#50c646')
+		{
+			if(LOGO_CUSTOMIZED)
+				document.getElementById('logo').src = "img/" + system + "_logo.png";
+			else
+				document.getElementById('logo').src = "img/logo2.png";
+		}
+		
+		window.localStorage.setItem("paysuccess","NO");
+		var content_body = document.getElementById("content_body");
+   		var footingHeight = document.getElementById("footing").offsetHeight;
+   		content_body.style.height=(window.innerHeight - footingHeight - content_body.getBoundingClientRect().top)+"px";
+   		checkOpenId ();
+		$.post(my_ip_address + "/weixin/get_token", {'myurl' :location.href.split('#')[0],'appid':my_appid}, function(data) {
+			data=eval("("+data+")");
+			wx.config({
+				  debug: false,
+			      appId: my_appid,
+			      timestamp: data.timestamp,
+			      nonceStr: data.noncestr,
+			      signature: data.signature,
+			      jsApiList: [
+			      	'closeWindow',
+			        'scanQRCode',
+			        'chooseWXPay'
+			      ]
+			});
+		});
+		
+		btn_choose_city.innerHTML = chooseCity + "<span style='margin: 2px;' class='caret'></span>";
+		for (var i = 0; i < city_list.length; i ++)
+		{
+			var city = city_list[i];
+			var myA 	= document.createElement("a");
+			myA.style.fontSize="18px";
+			myA.innerHTML = city;
+			var myLi=document.createElement("li"); 
+			myLi.appendChild(myA);
+		    dropdown_city_menu.appendChild(myLi);
+		     
+		    myA.onclick = function(e)
+		    {
+		    		chooseCity = e.target.innerHTML;
+		    		btn_choose_city.innerHTML = chooseCity + "<span style='margin: 2px;' class='caret'></span>";
+		    		license.innerText = "车牌号:" + chooseCity + chooseLetter + "-" + license_number.value;
+		    }
+		}
+		
+		btn_choose_letter.innerHTML = chooseLetter + "<span style='margin: 2px;' class='caret'></span>";
+		for (var i = 0; i < letter_list.length; i ++)
+		{
+			var letter = letter_list[i];
+			var myA 	= document.createElement("a");
+			myA.style.fontSize="18px";
+			myA.innerHTML = letter;
+			var myLi=document.createElement("li"); 
+			myLi.appendChild(myA);
+		    dropdown_letter_menu.appendChild(myLi);
+		     
+		    myA.onclick = function(e)
+		    {
+		    		chooseLetter = e.target.innerHTML;
+		    		btn_choose_letter.innerHTML = chooseLetter + "<span style='margin: 2px;' class='caret'></span>";
+		    		license.innerText = "车牌号:" + chooseCity + chooseLetter + "-" + license_number.value;
+		    }
+		}
+		
+		immediately ();
+	}
+	
+	function checkOpenId ()
+	{
+		var openId = window.localStorage.getItem(my_appid+"openId");
+		var nickname = window.localStorage.getItem("nickname");
+		if (!openId)
+		{
+			var wechatCode = GetQueryString('code');
+			$.post(my_ip_address + "/wechat/getOpenId", {'code':wechatCode,'appid':my_appid}, function(data)  {
+				data=eval("("+data+")");
+				if(data.openId){
+					window.localStorage.setItem(my_appid+"openId", data.openId);
+				}
+				window.localStorage.setItem("nickname", data.nickname);
+			});
+		}
+	}
+
+ 	//添加监听车牌输入框
+ 	function immediately()
+ 	{
+	  if("\v"=="v") {
+		license_number.onpropertychange = webChange;
+	  }
+	  else
+	  {
+		license_number.addEventListener("input",webChange,true);
+	  }
+
+	};
+	function webChange()
+	{
+		//license_number.value = license_number.value.toUpperCase();
+		license.innerText = "车牌号:" + chooseCity + chooseLetter + "-" + license_number.value.toUpperCase();
+	};
+
+
+	btn_submit.onclick = function ()
+	{
+		var wholeLicense = chooseCity + chooseLetter + license_number.value;
+		var checkLicense = chooseLetter + license_number.value;
+		if (myIsLicense(checkLicense))
+		{
+			btn_submit.setAttribute("disabled", "true");//屏蔽按钮
+			updateLpn (checkLicense.toUpperCase());
+		}
+		else 
+		{
+			alert("车牌输入有误，请正确输入");
+		}
+	}
+	
+	function updateLpn(myLpn)
+	{
+		var openId = window.localStorage.getItem(my_appid+"openId");
+		if (!openId)
+			checkOpenId();
+		$.post(my_ip_address+"/user/update_lpn", {'lpn' : myLpn,'appid':my_appid, 'openId': openId, 'parkId': system}, function(data)
+			{
+				btn_submit.removeAttribute("disabled");//启用按钮
+				data = eval("("+data+")");
+				if (data.code == RESULT_ERROR)
+				{
+					license_number.value = '';
+					alert(data.msg);
+				}
+				else if (data.code == RESULT_SUCCESS)
+				{
+					if (data.Price <= 0)
+					{
+						window.location.href = "ParkingPaySuccess.html?get_Seq="+data.Seq+"&getbill=False"+"&Lpn="+data.Lpn+"&nr="+data.PaymentNr;
+					}
+					else 
+					{
+						 var url = 'ParkingCharge.html?Seq=' + data.Seq +
+                            '&Price=' + data.Price +
+                            '&Lpn=' + data.Lpn +
+                            '&Time=' + data.Time +
+                            '&Entry=' + data.Entry +
+                            '&PaymentNr=' + data.PaymentNr +
+                            '&Discount=' + data.Discount +
+                            '&QuitTime=' + data.QuitTime;
+						window.localStorage.setItem('sendParkName',data.ParkName);
+						window.localStorage.setItem('sendNote',data.note);
+                    window.location.href = url;
+					}
+				}
+			});
+	}
+	
+	function myIsLicense(inpurStr)
+	{
+		var partten = /^[A-Za-z]{1}[A-Za-z_0-9]{5}$/;
+		if(partten.test(inpurStr))
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	};
+
+</script>

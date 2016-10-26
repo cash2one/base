@@ -1,0 +1,290 @@
+import datetime
+
+from flask.ext.mongoengine import MongoEngine
+from flask.ext.security import UserMixin, RoleMixin
+from mongoengine.queryset.base import *
+from bson.json_util import default
+
+db = MongoEngine()
+
+
+# 微信的token
+class WechatToken(db.Document):
+    key = db.StringField(max_length=50)
+    token = db.StringField(max_length=200)
+    ticket = db.StringField(max_length=200)
+    outtime = db.StringField(max_length=200)
+    noncestr = db.StringField(max_length=200)
+    timestamp = db.StringField(max_length=200)
+    create_time = db.DateTimeField(default=datetime.datetime.now)
+
+
+# 停车订单的计数器
+class SeqIndex(db.Document):
+    key = db.StringField(max_length=50)
+    value = db.StringField(max_length=200)
+    create_time = db.DateTimeField(default=datetime.datetime.now)
+
+
+# Config specifically for Park
+class ParkConfig(db.Document):
+    name = db.StringField(max_length=50)
+    value = db.StringField(max_length=200)
+    create_time = db.DateTimeField(default=datetime.datetime.now)
+
+
+# Role
+class Role(db.Document, RoleMixin):
+    name = db.StringField(max_length=80, unique=True)
+    description = db.StringField(max_length=255)
+
+    def __str__(self):
+        return self.description
+
+    def __unicode__(self):
+        return self.description
+
+
+# 物业公司model
+class PropertyCompany(db.Document):
+    company_name = db.StringField(verbose_name="Name", max_length=255, required=True)
+    address = db.StringField(max_length=255)
+    post = db.IntField(max_length=10)
+    contact = db.StringField(max_length=255)
+    telephone = db.StringField(max_length=50)
+    wechat_account = db.StringField(max_length=50)
+
+    deposit_bank = db.StringField(max_length=255)
+    bank_account = db.StringField(max_length=50)
+    bank_account_name = db.StringField(max_length=255)
+
+    wechat_appid = db.StringField(max_length=255)
+    wechat_secret = db.StringField(max_length=255)
+    wechat_account_type = db.StringField(max_length=255)
+    wechat_mch_id = db.StringField(max_length=255)
+    wechat_m_api_key = db.StringField(max_length=255)
+
+    alipay_account = db.StringField(max_length=100)
+    alipay_partner=db.StringField(max_length=100)
+    alipay_md5_key=db.StringField(max_length=255)
+
+
+    create_time = db.DateTimeField(default=datetime.datetime.now)
+    logo = db.ImageField(size=(512, 512, False), thumbnail_size=(64, 64, False))
+
+    def __unicode__(self):
+        return str(self.company_name)
+
+
+# 停车场群管理model
+class ParkManagement(db.Document):
+    park_id = db.StringField(max_length=20, required=True, unique=True)
+    park_name = db.StringField(verbose_name="Name", max_length=255, required=True, unique=True)
+    address = db.StringField(max_length=255)
+    company = db.ReferenceField(PropertyCompany, required=True)
+    server = db.URLField(max_length=255)
+    telephone = db.StringField(max_length=50)
+    invoice_code = db.StringField(max_length=50)
+    wechat_goods_tags = db.StringField(max_length=50)
+    contact = db.StringField(max_length=50)
+    admin = db.StringField(max_length=255)
+    quit_time_limit = db.StringField(max_length=50, default='20')
+    create_time = db.DateTimeField(default=datetime.datetime.now)
+    logo = db.ImageField(size=(512, 512, False), thumbnail_size=(64, 64, False))
+    note = db.StringField(max_length=255)
+    def __unicode__(self):
+        return str(self.park_id) + ':' + str(self.park_name)
+
+    def __str__(self):
+        return self.park_id + ':' + self.park_name
+
+
+# 停车场订单model
+class UserOrder(db.Document):
+    payway = db.StringField(max_length=20)  # 支付方式
+    ticket = db.StringField(max_length=50)  # 票据
+    license_plate = db.StringField(max_length=50)  # 车牌号
+    wechat_id = db.StringField(max_length=255)  # 微信号
+    alipay_id = db.StringField(max_length=255)  # 支付宝号
+    alipay_openId = db.StringField(max_length=255)
+    pay_type = db.IntField(default=1)   # 支付类型
+    seq = db.StringField(max_length=50) # 订单号
+
+    time = db.IntField(max_length=255)  # 停留时间
+    entry = db.StringField(max_length=100)  # 进库时间
+    quit_time = db.StringField(max_length=50)  # 离开时间  订单时间
+    pay_time = db.DateTimeField()  # 付费时间
+    discount = db.StringField(max_length=50)    # 折扣
+    price = db.StringField(max_length=50)   # 应收金额
+    coupon_price = db.StringField(default='0.0')    # 优惠金额
+    ActualPrice = db.StringField(max_length=50) # 实收金额
+    isPaid = db.BooleanField(default=False) # 是否支付
+    paymentNr = db.StringField(max_length=50)  # 缴费次数
+    isInvoice = db.BooleanField(default=False)  # 发票状态
+    chooseCouponId = db.StringField(max_length=100) # 优惠券编号
+    park_id = db.StringField(max_length=20)  # 停车场编号
+    park_name = db.StringField(max_length=50)   # 停车场名称
+    company_name = db.StringField(max_length=255)   # 物业公司
+    ticket_from = db.StringField(max_length=255)
+    out_trade_no = db.StringField(max_length=255,default='')    # 平台订单
+    wechat_openId = db.StringField(max_length=255)  # 微信OPEN_ID
+    third_wechat_openId = db.StringField(max_length=255)  # 第三方公众号用户的OpenID
+    seller_name = db.StringField(max_length=255)  # 停车场商家
+    def __unicode__(self):
+        return str(self.seq)
+
+
+# 用户卡券管理model
+class UserCouponModel(db.Document):
+    wechat_openId = db.StringField(max_length=255, required=True)
+    coupon_id = db.StringField(max_length=100, required=True)
+    park_name = db.StringField(max_length=100)
+    coupon_name = db.StringField(max_length=100)
+    coupon_status = db.IntField()
+    coupon_price = db.FloatField()
+    coupon_validity = db.StringField(max_length=100)
+    receive_count = db.IntField(default=1)
+    total_count = db.IntField(default=0)
+    coupon_start = db.StringField(max_length=100)
+    seller_name = db.StringField(max_length=255)
+    def __unicode__(self):
+        return str(self.coupon_id)
+
+
+# 用户管理model
+class User(db.Document):
+    wechat_id = db.StringField(max_length=255)
+    wechat_openId = db.StringField(max_length=255)
+    alipay_id = db.StringField(max_length=255)
+    alipay_openId = db.StringField(max_length=255)
+    mobile = db.StringField(max_length=50)
+    license_plate = db.StringField(max_length=50)
+    create_time = db.DateTimeField(default=datetime.datetime.now)
+    park_id = db.StringField(max_length=20)  # 以此过滤停车场
+    company_name = db.StringField(max_length=255)
+    varify_code = db.StringField(max_length=50)
+    coupon_list = db.ListField(db.ReferenceField(UserCouponModel, reverse_delete_rule=PULL), default=[])
+
+    def __unicode__(self):
+        if (self.wechat_id):
+            return str(self.wechat_id)
+        elif (self.alipay_id):
+            return str(self.alipay_id)
+
+
+# 卡券子码
+class CouponSubCode(db.Document):
+    subCode = db.StringField(max_length=13)
+
+
+# 卡券管理model
+class CouponManagement(db.Document):
+    coupon_name = db.StringField(max_length=100, required=True)
+    coupon_id = db.StringField(max_length=100, required=True)
+    price = db.StringField(max_length=20, default='1.00', required=True)
+    receive_date = db.DateTimeField(default=datetime.datetime.strptime(str(datetime.date.today()), '%Y-%m-%d'))
+    receive_close_date = db.DateTimeField(
+            default=datetime.datetime.strptime(str(datetime.date.today()), '%Y-%m-%d') + datetime.timedelta(days=+7,
+                                                                                                            hours=+23,
+                                                                                                            minutes=+59,
+                                                                                                            seconds=+59))
+    valid_date = db.DateTimeField(
+            default=datetime.datetime.strptime(str(datetime.date.today()), '%Y-%m-%d') + datetime.timedelta(days=+7,
+                                                                                                            hours=+23,
+                                                                                                            minutes=+59,
+                                                                                                            seconds=+59))
+    receive_count = db.StringField(max_length=20, default='1')
+    coupon_type = db.StringField(max_length=255, default=0)
+    amount = db.StringField(max_length=20, default='1')
+    received_amount = db.IntField(default=0)
+    used_amount = db.IntField(default=0)
+    parks = db.StringField()
+    park_id = db.StringField(max_length=255)  # 以此过滤停车场
+    company_name = db.StringField(max_length=255)
+    coupon_status = db.StringField(max_length=20)
+
+    start_date = db.DateTimeField(default=datetime.datetime.strptime(str(datetime.date.today()), "%Y-%m-%d"))
+    used_coupons = db.ListField(db.ReferenceField(CouponSubCode))
+    seller_name = db.StringField(max_length=255)
+    monetary = db.StringField(max_length=20, default='0.00')  # 消费金额
+
+    def __unicode__(self):
+        return str(self.coupon_name)
+
+# 发票管理model
+class InvoiceManagement(db.Document):
+    company_name = db.StringField(max_length=255)
+    park_id = db.StringField(max_length=255, unique=True)  # 以此过滤停车场
+    parks = db.StringField(max_length=50, required=True)
+    invoice_switch = db.StringField(max_length=10, required=True)
+    invoice_btn_name = db.StringField(max_length=100)
+    invoice_prompt_data = db.StringField()
+    invoice_prompt_url = db.URLField(max_length=255)
+
+    def __unicode__(self):
+        return str(self.invoice_switch)
+
+# 折扣管理model
+class DiscountManagement(db.Document):
+    company_name = db.StringField(max_length=255)
+    park_id = db.StringField(max_length=255)  # 以此过滤停车场
+    parks = db.StringField(max_length=255, required=True)  # 以此过滤停车场
+    week_day = db.StringField(max_length=10, required=True)  # 周期
+    discount_type = db.StringField(max_length=10, required=True)  # 折扣类型，默认1固定折扣
+    fix_discount = db.StringField(max_length=10, default=0, required=True)  # 固定折扣金额
+    random_min = db.StringField(max_length=10, default=0, required=True)  # 随机最小折扣金额
+    random_max = db.StringField(max_length=10, default=0, required=True)  # 随机最大折扣金额
+    reuse_times = db.StringField(max_length=10, default=1, required=True)  # 当天使用次数
+
+    def __unicode__(self):
+        return str(self.parks)
+
+# 管理员管理model
+class ParkAdmin(db.Document, UserMixin):
+    username = db.StringField(verbose_name="Name", max_length=255, required=True, unique=True)
+    password = db.StringField(max_length=255, required=True)
+    company = db.ReferenceField(PropertyCompany, reverse_delete_rule=CASCADE)
+    park = db.ReferenceField(ParkManagement, reverse_delete_rule=CASCADE)
+    email = db.EmailField(max_length=255)
+    telephone = db.StringField(max_length=50)
+    create_time = db.DateTimeField(default=datetime.datetime.now)
+    roles = db.ListField(db.ReferenceField(Role), default=[])
+    active = db.BooleanField(default=True)
+    confirmed_at = db.DateTimeField()
+
+
+    def __unicode__(self):
+        return str(self.username)
+
+
+# 微信效验订单
+class WechatOrder(db.Document):
+    out_trade_no = db.StringField(max_length=255)
+    sign = db.StringField(max_length=255)
+    openid = db.StringField(max_length=255)
+    Ticket = db.StringField(max_length=255)
+    lpn = db.StringField(max_length=50)
+    isCheck = db.BooleanField(default=False)
+    Time = db.IntField(default=0)
+    QuitTime = db.StringField(max_length=50)
+    seq = db.StringField(max_length=50)
+    chooseCouponId = db.StringField(max_length=50)
+    payway = db.StringField(max_length=50)
+
+
+# 支付宝支付时生成的临时订单
+class AlipaySaveOrder(db.Document):
+    code = db.StringField(max_length=255)
+    Seq = db.StringField(max_length=255)
+    Price = db.FloatField(default=0.00)
+    Ticket = db.StringField(max_length=255)
+    Time = db.StringField(max_length=255)
+    Entry = db.StringField(max_length=255)
+    PaymentNr = db.StringField(max_length=255)
+    Discount = db.StringField(max_length=255)
+    QuitTime = db.StringField(max_length=255)
+    buyEmail = db.StringField(max_length=255)
+    buyId = db.StringField(max_length=255)
+    parkId = db.StringField(max_length=50)
+    payway = db.StringField(max_length=50)
+    lpn = db.StringField(max_length=50)

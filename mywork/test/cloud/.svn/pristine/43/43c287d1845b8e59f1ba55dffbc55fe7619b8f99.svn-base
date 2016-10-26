@@ -1,0 +1,13 @@
+.DS_Store
+__pycache__
+*.pyc
+*.pyo
+.idea/
+venv/
+config/production.py
+config/development.py
+.settings/*
+.project
+.pydevproject
+/dist
+*.egg-info/

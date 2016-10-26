@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+		<title>个人信息</title>
+		<script src="js/config.js"></script>
+		<script src="js/jquery.min.js"></script>
+		<script src="bootstrap/dist/js/bootstrap.min.js"></script>
+		<link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link type="text/css" href="css/ParkingCSS.css" rel="stylesheet" />
+	</head>
+	<body class="html_body">
+		<div id="container" >
+			<div id="content_body" >
+				<div style="margin:0 auto;text-align:center;margin-top: 30px;margin-bottom: 30px;">
+					<img src="img/logo_big.png" width="165" height="60" /> 
+				</div>
+				<div style="margin:10px;">
+					<p id="phone"style="margin: 0px; font-size: 20px;margin-left:15px ;">手机号码</p>
+					<br />
+					<div class="btn-group-vertical" role="group" style="width: 100%;">
+						<button id = "bindLicense" type="button" class="btn btn-default btn-lg ">
+							<span id="license" style="float: left;">车牌号码</span>
+							<span class="glyphicon glyphicon-menu-right pull-right" aria-hidden="true"></span>
+						</button>
+						
+						<button id="payHistroy" type="button" class="btn btn-default btn-lg">
+							<span style="float: left;">缴费记录</span>
+							<span class="glyphicon glyphicon-menu-right pull-right" aria-hidden="true"></span>
+						</button>
+						
+						<button id="checkCoupon" type="button" class="btn btn-default btn-lg" >
+							<span style="float: left;">我的卡券</span>
+							<span class="glyphicon glyphicon-menu-right pull-right" aria-hidden="true"></span>
+						</button>
+					</div>
+					
+					<div style="margin:0 auto;text-align:center">
+						<button id = "exit_btn" type="button" class="btn btn-primary btn-lg" style="margin-top: 30px;font-size: 18px;padding-bottom: 10px; padding-top: 10px; width: 100%;">退出当前账号</button>
+					</div>
+				</div>
+			</div>
+			<div id="footing" style="text-align:center;">
+				 Powered by: <img id="logo" src="img/logo.png" width="30" height="12" /> Copyright ©2016
+			</div>
+		</div>
+		
+		
+		
+	</body>
+</html>
+
+<script>
+	var phone = document.getElementById("phone");
+	var license = document.getElementById("license");
+	
+	var payHistroy = document.getElementById("payHistroy");
+	var checkCoupon = document.getElementById("checkCoupon");
+	var bindLicense = document.getElementById("bindLicense");
+	
+	var exit_btn = document.getElementById("exit_btn");
+	
+	init();
+	function init()
+	{
+// 		var title = window.localStorage.getItem("title");
+//		if (title != null && title.length >0)
+//		{
+//			document.title = title;
+//		}
+		
+		// 替换按钮颜色和LOGO图标
+		var syscolor = window.localStorage.getItem('syscolor');
+		if(syscolor)
+		{
+			var btnNodes = document.querySelectorAll('.btn-primary');
+			if(btnNodes)
+			{
+				for(var i=0; i < btnNodes.length; i++)
+				{
+					if(btnNodes[i])
+					{
+						btnNodes[i].style.backgroundColor = syscolor;
+						btnNodes[i].style.borderColor = syscolor;
+					}
+				}
+			}
+		}
+		
+		if(syscolor == '#50c646')
+		{
+			if(LOGO_CUSTOMIZED)
+				document.getElementById('logo').src = "img/" + system + "_logo.png";
+			else
+				document.getElementById('logo').src = "img/logo2.png";
+		}
+		
+		
+		var content_body = document.getElementById("content_body");
+		var footingHeight = document.getElementById("footing").offsetHeight;
+		content_body.style.height=(window.innerHeight - footingHeight - content_body.getBoundingClientRect().top)+"px";
+		   		
+		var openId = window.localStorage.getItem(my_appid+"openId");
+		$.post(my_ip_address + "/user/get_user_info", {'openId' :openId},function(data)
+		{
+			data=eval("("+data+")");
+			if (data.code == RESULT_SUCCESS)
+			{
+				phone.innerText = "手机："+data.mobile;
+				license.innerText ="车牌号码:"+data.license;
+			}
+		});
+	}
+	
+	bindLicense.onclick = function()
+	{
+		window.location.href = "ParkingCenterBindingLicense.html";
+	}
+	payHistroy.onclick = function()
+	{
+		window.location.href = "ParkingCenterHistroy.html";
+	}
+	checkCoupon.onclick = function()
+	{
+		window.location.href = "ParkingCenterCoupon.html";
+	}
+	exit_btn.onclick = function()
+	{
+		window.localStorage.setItem("loginSuccess", "false");
+		window.location.href = "ParkingLogin.html";
+	}
+	
+</script>

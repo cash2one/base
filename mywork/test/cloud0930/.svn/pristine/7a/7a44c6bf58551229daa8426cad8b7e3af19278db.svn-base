@@ -1,0 +1,32 @@
+{% extends 'sb-admin/base.html' %}
+
+{% block body %}
+    <script src="/bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="/bower_components/jquery.qrcode/dist/jquery.qrcode.min.js"></script>
+
+
+    <div class="row">
+
+        {% if admin_view.encodes %}
+
+            {% for encode in admin_view.encodes %}
+
+                <div id="qrcode-{{ encode }}" class="col-xs-2 ">
+                    <script>
+                        var code = '{{encode}}'
+                        $('#qrcode-{{encode}}').qrcode({
+                            "render": "canvas",
+                            "size": 128,
+                            "color": "#3a3",
+                            "text": code
+                        });
+                    </script>
+                    <p class="text-left">&nbsp&nbsp&nbsp{{ encode }}</p>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+{% endblock %}
+{% block tail_js %}
+
+{% endblock %}

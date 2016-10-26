@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+		<title>领取完成</title>
+		<script src="js/jquery.min.js"></script>
+		<script src="bootstrap/dist/js/bootstrap.min.js"></script>
+		<link type="text/css" href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+		<script src="https://res.wx.qq.com/open/js/jweixin-1.0.0.js"> </script>
+		<link type="text/css" href="css/ParkingCSS.css" rel="stylesheet" />
+		<script src="js/config.js"></script>
+		<script src="js/MyJSTools.js"></script>
+	</head>
+	<body class="html_body">
+		<div id="container" >
+			<div id="content_body" >
+				<p style="font-size: 15px;margin-bottom: 10px;" >尊敬的先生/女士:</p>
+				<p style="font-size: 15px;margin-bottom: 0px;">您的订单：<label  id = "seq" style="color: #2a2afd;font-size: 15px;">dd</label></p>
+				<p id = "bill_price_p" style="font-size: 15px;margin-bottom: 0px;">发票金额：<label  id = "price" style="color: #ff0000;font-size: 30px;">dd</label>元</p>
+				<p style="font-size: 15px;margin-bottom: 20px;">发票已经领取成功，请将此页面展示给服务人员查看，谢谢您的配合！</p>
+				<div style="margin:0 auto;text-align:center;margin-top: 100px;">
+					<button id = "ok_button" type="button" class="btn btn-primary btn-lg" style="width: 100%;font-size: 18px;color: #ffffff;">确定</button>
+				</div>
+				
+			</div>
+			<div id="footing" style="text-align:center;">
+				 Powered by: <img id="logo" src="img/logo.png" width="30" height="12" /> Copyright ©2016
+			</div>
+		</div>
+	</body>
+</html>
+
+<script type="text/javascript">
+	var code_button = document.getElementById("code_button");
+	var code = document.getElementById("code");
+	var getSeq = "";
+	var getFrom = "";
+	init ();
+ 	function init ()
+ 	{
+//  		var title = window.localStorage.getItem("title");
+//		if (title != null && title.length >0)
+//		{
+//			document.title = title;
+//		}
+		
+		// 替换按钮颜色和LOGO图标
+		var syscolor = window.localStorage.getItem('syscolor');
+		if(syscolor)
+		{
+			var btnNodes = document.querySelectorAll('.btn-primary');
+			if(btnNodes)
+			{
+				for(var i=0; i < btnNodes.length; i++)
+				{
+					if(btnNodes[i])
+					{
+						btnNodes[i].style.backgroundColor = syscolor;
+						btnNodes[i].style.borderColor = syscolor;
+					}
+				}
+			}
+		}
+		
+		if(syscolor == '#50c646')
+		{
+			if(LOGO_CUSTOMIZED)
+				document.getElementById('logo').src = "img/" + system + "_logo.png";
+			else
+				document.getElementById('logo').src = "img/logo2.png";
+		}
+		
+   		var content_body = document.getElementById("content_body");
+   		var footingHeight = document.getElementById("footing").offsetHeight;
+   		content_body.style.height=(window.innerHeight - footingHeight - content_body.getBoundingClientRect().top)+"px";
+   		
+   		getSeq = getQueryStr("get_Seq", "");
+   		getFrom = getQueryStr("from","");
+   		document.getElementById("seq").innerText = getSeq ;
+   		
+   		document.getElementById("bill_price_p").hidden = true;
+   		
+   		$.post(my_ip_address +"/user/getBillPrice", {'seq':getSeq}, function(data){
+   			data=eval("("+data+")");
+   			if(data.code == 1)
+   			{
+// 				var price = "<label style='color: #ff0000;font-size: 30px;'>"+data.price+"</label>"
+// 				document.getElementById("seq").innerHTML = getSeq +",发票金额："+price+"元,";
+   				
+   				document.getElementById("seq").innerHTML = getSeq ;
+   				document.getElementById("price").innerText = data.price;
+   				
+   				document.getElementById("bill_price_p").hidden = false;
+   			}
+   			else 
+   			{
+   				document.getElementById("seq").innerText = getSeq ;
+   				document.getElementById("bill_price_p").hidden = true;
+   			}
+   			
+   		});
+   		
+   		
+   		
+   	}
+ 	
+ 	document.getElementById("ok_button").onclick = function()
+ 	{
+ 		if (getFrom == "histroy")
+ 		{
+ 			window.location.href = "ParkingCenterHistroy.html";
+ 		}
+ 		else 
+ 		{
+ 			window.location.href = "ParkingScan.html";
+ 		}
+ 		
+ 	}
+ 	
+ 	function getQueryStr(str, noValue)
+	{
+		var reg = new RegExp("(^|&)"+ str +"=([^&]*)(&|$)");
+	    var r 	= window.location.search.substr(1).match(reg);
+	    if (r!=null) 
+	    		return unescape(r[2]); 
+	    	return noValue;
+	};
+</script>
