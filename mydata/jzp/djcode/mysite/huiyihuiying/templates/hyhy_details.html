@@ -1,0 +1,63 @@
+
+{% extends "base1.html"%}
+
+{% block details %}
+<div class="con wid">
+		<div class="text1 text2 clearfix">
+<!--				<div class="tu tu-con"><img src="/static/images/text-tu.jpg" ></div>-->
+				<div class="text text-con" id="content">
+                        <div class="weizhi">
+                          <a href="../../index.html" class="first">首页<i></i></a>
+                          {% if current_lanmu.fid %}
+                          <a href="/hyhy/new/{{current_lanmu.fid.id}}/"><b></b>{{a.channel.fid}}<i></i></a>
+                          {% endif %} 
+                          <a href="/new/{{current_lanmu.name.id}}/"><b></b>{{a.channel}}<i></i></a>
+                        </div>
+                        <h3>{{a.title}}</h3>
+                        <h4 class="clearfix"><span>{{a.date|date:'Y-m-d'}}</span><span>作者：{{a.author}}</span></h4>
+						<!--<p style="margin: 15px 0px 0px; padding: 0px; color: rgb(51, 51, 51); font-family: Arial, simsun; font-size: 14px; line-height: 28px; background-color: rgb(255, 255, 255);"><img alt="" src="../../media/uploads/2015/10/29/zghnln.jpg" style="width: 400px; height: 290px;" /></p>
+
+<p style="margin: 15px 0px 0px; padding: 0px; color: rgb(51, 51, 51); font-family: Arial, simsun; font-size: 14px; line-height: 28px; background-color: rgb(255, 255, 255);">有一个患者，31岁，很年轻，有娇小的身体，灵动的眼神，当时是通过慧影平台接触的远程看片子，然后专家查出，可能有恶性，然后去省医院进行深入检查，查完身体，向患者交待病情：有恶性可能。印象中患者当时并没有紧张，害怕，眼神里还是辉映着午后阳光的色彩，没有一丝忧郁的影子，没有患得患失。</p>
+
+<p style="margin: 15px 0px 0px; padding: 0px; color: rgb(51, 51, 51); font-family: Arial, simsun; font-size: 14px; line-height: 28px; background-color: rgb(255, 255, 255);">4月1日，手术活检的结果却是浸润性导管癌。作为一个医生，面对一个疾病的最后诊断，应该是理性的，但作为一个患者的同龄人，我却似乎被结果震撼了。患者知道结果后，很冷静，仔细了解了病情，选择了手术方式与随后的治疗。没有眼泪，没有怀疑，没有愤怒，即使当她出差在外刚回上海的丈夫来到她身边的时候，她仍然微笑着，没有表现出一个小女人惯常有的慌张与无助，依旧很宁静，平和，而又满含着坚强。他的丈夫，所说的只是一句话：不要多想，我支持你。</p>
+
+<p style="margin: 15px 0px 0px; padding: 0px; color: rgb(51, 51, 51); font-family: Arial, simsun; font-size: 14px; line-height: 28px; background-color: rgb(255, 255, 255);">患者选择了<a href="http://www.haodf.com/jibing/ruxianai.htm" style="text-decoration: none; color: rgb(51, 51, 51); outline: none;" target="_blank">乳癌</a>保乳根治术，术后进行了<a href="http://www.haodf.com/jibing/hualiao.htm" style="text-decoration: none; color: rgb(51, 51, 51); outline: none;" target="_blank">化疗</a>，不久要进行放疗，靶向治疗等。<a href="http://www.haodf.com/jibing/hualiao.htm" style="text-decoration: none; color: rgb(51, 51, 51); outline: none;" target="_blank">化疗</a>让患者<a href="http://www.haodf.com/jibing/tuofa.htm" style="text-decoration: none; color: rgb(51, 51, 51); outline: none;" target="_blank">脱发</a>，胃肠道反应很重，白细胞也降的很低，患者不再外出，但仍然有自己的生活，时常有朋友去看她，给她带很多各种体裁的读物，每次她都一如往昔，拾掇的神清气爽，这不是一种强颜欢笑，给人的感觉是一种真正来自内心的达观与对生活的激情；她的丈夫给她准备了一套有很多种并且可以自动升级的游戏，游戏中的她同样的大笑，像孩童般对周围的世界保持着好奇与信任；而当周围一切静静的，每个人都在忙碌的时候，她在想，可以为其它同样的患者，为周围爱她的人做些什么。谁能想到这小小的身体中蕴含着这样强大的生命力量与韧性。</p>
+
+<p style="margin: 15px 0px 0px; padding: 0px; color: rgb(51, 51, 51); font-family: Arial, simsun; font-size: 14px; line-height: 28px; background-color: rgb(255, 255, 255);">（知情医生根据患者自身故事叙述）</p>
+
+<p style="margin: 15px 0px 0px; padding: 0px; color: rgb(51, 51, 51); font-family: Arial, simsun; font-size: 14px; line-height: 28px; background-color: rgb(255, 255, 255);">&nbsp;</p>-->
+								{{a.content|safe}}
+
+                        <h5>推荐文章</h5>
+                        <ul>
+                          
+                          <li><a href="../11/index.html">致平阳患者的一封信</a></li>
+                          
+                          <li><a href="../71/index.html">尊享卡使用说明</a></li>
+                          
+                          <li><a href="../49/index.html">我的故事（2）</a></li>
+                          
+                          <li><a href="../48/index.html">我的故事（1）</a></li>
+                          
+                        </ul>
+				</div>
+		</div>
+</div>
+<script>
+var imgs = $('#content img');
+var w = $(window).width();
+$.each(imgs,function(){
+	var s = $(this).attr('src');
+	var wt = parseInt($(this).css('width'));
+	var ht = parseInt($(this).css('height'));
+	if(wt > w)
+	{
+		$(this).css('width','100%');
+		newwt = $(this).width();
+		$(this).css('height',ht * (newwt / wt) + 'px');
+	}
+	$(this).attr('src','http://weixin.huiyihuiying.com'+s);	
+})
+</script>
+{% endblock %}
+

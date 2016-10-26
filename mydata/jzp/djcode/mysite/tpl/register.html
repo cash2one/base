@@ -1,0 +1,23 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ STATIC_URL }}bootstrap/css/bootstrap.min.css" />
+    <title>Title</title>
+    <style type="text/css">
+    span {float: right;}
+    </style>
+</head>
+<body>
+			
+        <form  action='' method="post">{% csrf_token %}
+			<div  id="register" style="width:600px;height:330px;margin:0px auto;background-color:#CCC;border-radius: 10px;padding: 10px;margin-top: 100px;">				
+				<h4 style="padding-bottom:10px;color:blue;">用户注册<span><a href="/articles/login/" >登陆</a></span></h4>			
+				<table class="table">            
+            {{ form.as_table }}
+            </table>
+            <input type="submit" value="注册" class="btn btn-primary">
+			</div>        
+        </form>
+
+</body>
+</html>

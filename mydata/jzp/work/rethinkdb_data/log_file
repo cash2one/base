@@ -1,0 +1,18 @@
+2016-01-25T09:43:50.980545000 0.532128s notice: Recursively removing directory /Users/jia/work/rethinkdb_data/tmp
+2016-01-25T09:43:50.981625000 0.533211s notice: Initializing directory /Users/jia/work/rethinkdb_data
+2016-01-25T09:43:50.981707000 0.533290s info: Creating a default database for your convenience. (This is because you ran 'rethinkdb' without 'create', 'serve', or '--join', and the directory '/Users/jia/work/rethinkdb_data' did not already exist or is empty.)
+2016-01-25T09:43:50.981768000 0.533351s notice: Running rethinkdb 2.2.3-1 (CLANG 7.0.2 (clang-700.1.81))...
+2016-01-25T09:43:50.996697000 0.548281s notice: Running on Darwin 15.0.0 x86_64
+2016-01-25T09:43:50.996760000 0.548342s notice: Loading data from directory /Users/jia/work/rethinkdb_data
+2016-01-25T09:43:52.012876000 1.564432s info: Automatically using cache size of 2762 MB
+2016-01-25T09:43:52.013275000 1.564830s notice: Listening for intracluster connections on port 29015
+2016-01-25T09:43:52.025880000 1.577435s notice: Listening for client driver connections on port 28015
+2016-01-25T09:43:52.026071000 1.577627s notice: Listening for administrative HTTP connections on port 8080
+2016-01-25T09:43:52.026076000 1.577632s notice: Listening on addresses: 127.0.0.1, ::1
+2016-01-25T09:43:52.026077000 1.577633s notice: To fully expose RethinkDB on the network, bind to all addresses by running rethinkdb with the `--bind all` command line option.
+2016-01-25T09:43:52.026081000 1.577636s notice: Server ready, "bogon_vjh" 71f5931f-1ea8-4b88-b639-cb63c1aa3494
+2016-01-25T09:47:28.091895000 217.640316s notice: Server got SIGINT from pid 588, uid 501; shutting down...
+2016-01-25T09:47:28.092052000 217.640473s notice: Shutting down client connections...
+2016-01-25T09:47:28.092178000 217.640599s notice: All client connections closed.
+2016-01-25T09:47:28.092199000 217.640620s notice: Shutting down storage engine... (This may take a while if you had a lot of unflushed data in the writeback cache.)
+2016-01-25T09:47:28.092459000 217.640879s notice: Storage engine shut down.

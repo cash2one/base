@@ -1,0 +1,42 @@
+{% include "articles_index.html"%}
+
+<html>
+	<head>
+		<title>articles list</title>
+		<link rel="stylesheet" href="{{STATIC_URL}}bootstrap/css/bootstrap.min.css" type="text/css"/>
+		<meta charset='utf-8>'>
+	</head>
+	<body>	
+		<h2>精品文章</h2>
+		阅读，是一种习惯。<br/>
+		让我们从这里开始，喜欢上阅读。<br>
+		<h2>文章列表</h2>
+		{% if articles %}
+		<p>这里共有{{ forloop.counter }}篇文章</p>
+		
+		<table class="table table-striped table-condensed">
+			<tr>
+				<th>文章名</th>
+				<th>作者</th>
+				<th>题材</th>
+				<th>简介</th>
+				<th>发布日期</th>
+				<th>开始</th>
+			</tr>
+			{%for a in articles %}
+			{% if  a.classes %}
+			<tr>
+				<td>{{a.title}}</td>
+				<td>{{a.author}}</td>
+				<td>{{a.classes}}</td>
+				<td>{{a.about}}</td>
+				<td>{{a.pub_date}} </td>
+				<td><a href="/articles/articles_details/{{a.id}}/">阅读</a></td>
+			</tr>
+			{% endif %}
+			{%endfor%}
+		{%else%}
+	 <p>还没有文章</p>{%endif%}
+		</table>
+</body>
+</html>

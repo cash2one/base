@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ STATIC_URL}}bootstrap/css/bootstrap.min.css" />
+    <style type="text/css">
+    nav { font-size:20px;color:#fff; padding-top:9px;padding-left:40px; }
+    </style>
+    <title>{% block title %}{% endblock %}</title>
+</head>
+<body>
+    <nav class="navbar navbar-inverse">
+        |<a href="/res/list/">餐厅列表</a> |
+        {%  if request.user.is_authenticated %}
+            {{ request.user }}
+             <a href="/accounts/login/">退出登录</a>|
+             <a href="/accounts/register/">用户注册</a>|
+
+        {% else %}
+            <a href="/accounts/login/">用户登录</a>|
+            <a href="/accounts/register/">用户注册</a>|
+        {% endif %}
+    </nav>
+<h2>{% block h2 %}{% endblock %}</h2>
+{% block content %}{% endblock %}
+</body>
+</html>

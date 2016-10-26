@@ -1,0 +1,163 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Step 4: 请求数据库连接 &mdash; Flask 0.10.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/flasky.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.10.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Flask 0.10.1 documentation" href="../index.html" />
+    <link rel="up" title="教程" href="index.html" />
+    <link rel="next" title="Step 5: 视图函数" href="views.html" />
+    <link rel="prev" title="Step 3: 创建数据库" href="dbinit.html" />
+   
+  
+  <link rel="apple-touch-icon" href="../_static/touch-icon.png" />
+  
+  <link media="only screen and (max-device-width: 480px)" href="../_static/small_flask.css" type= "text/css" rel="stylesheet" />
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="views.html" title="Step 5: 视图函数"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="dbinit.html" title="Step 3: 创建数据库"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Flask 0.10.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">教程</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="step-4">
+<span id="tutorial-dbcon"></span><h1>Step 4: 请求数据库连接<a class="headerlink" href="dbcon.html#step-4" title="Permalink to this headline">¶</a></h1>
+<p>现在我们知道了怎样建立数据库连接以及在脚本中使用这些连接，但是我们如何能优雅地在请求中这么做？
+所有我们的函数中需要数据库连接，因此在请求之前初始化它们，在请求结束后自动关闭他们就很有意义。</p>
+<p>Flask 允许我们使用 <a class="reference internal" href="../api.html#flask.Flask.before_request" title="flask.Flask.before_request"><code class="xref py py-meth docutils literal"><span class="pre">before_request()</span></code></a>，<a class="reference internal" href="../api.html#flask.Flask.after_request" title="flask.Flask.after_request"><code class="xref py py-meth docutils literal"><span class="pre">after_request()</span></code></a> 和
+<a class="reference internal" href="../api.html#flask.Flask.teardown_request" title="flask.Flask.teardown_request"><code class="xref py py-meth docutils literal"><span class="pre">teardown_request()</span></code></a> 装饰器来实现这个功能:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@app.before_request</span>
+<span class="k">def</span> <span class="nf">before_request</span><span class="p">():</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">db</span> <span class="o">=</span> <span class="n">connect_db</span><span class="p">()</span>
+
+<span class="nd">@app.teardown_request</span>
+<span class="k">def</span> <span class="nf">teardown_request</span><span class="p">(</span><span class="n">exception</span><span class="p">):</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>使用 <a class="reference internal" href="../api.html#flask.Flask.before_request" title="flask.Flask.before_request"><code class="xref py py-meth docutils literal"><span class="pre">before_request()</span></code></a> 装饰器的函数会在请求之前被调用而且不带参数。使用
+<a class="reference internal" href="../api.html#flask.Flask.after_request" title="flask.Flask.after_request"><code class="xref py py-meth docutils literal"><span class="pre">after_request()</span></code></a> 装饰器的函数会在请求之后被调用且传入将要发给客户端的响应。
+它们必须返回那个响应对象或是不同的响应对象。但当异常抛出时，它们不一定会被执行，
+这时可以使用 <a class="reference internal" href="../api.html#flask.Flask.teardown_request" title="flask.Flask.teardown_request"><code class="xref py py-meth docutils literal"><span class="pre">teardown_request()</span></code></a> 装饰器。它装饰的函数将在响应构造后执行，
+并不允许修改请求，返回的值会被忽略。如果在请求已经被处理的时候抛出异常，它会被传递到每个函数，
+否则会传入一个 <cite>None</cite> 。</p>
+<p>我们把当前的数据库连接保存在 Flask 提供的 <a class="reference internal" href="../api.html#flask.g" title="flask.g"><code class="xref py py-data docutils literal"><span class="pre">g</span></code></a> 特殊对象中。这个对象只能保存一次请求的信息，
+并且在每个函数里都可用。不要用其它对象来保存信息，因为在多线程环境下将不可行。特殊的对象 <a class="reference internal" href="../api.html#flask.g" title="flask.g"><code class="xref py py-data docutils literal"><span class="pre">g</span></code></a> 在后台有一些神 奇的机制来保证它在做正确的事情。</p>
+<p>请继续浏览 <a class="reference internal" href="views.html#tutorial-views"><em>Step 5: 视图函数</em></a> 。</p>
+<div class="admonition hint">
+<p class="first admonition-title">Hint</p>
+<p>我该把代码放哪里？</p>
+<p>如果你一直遵循本教程，你可能会问从这步到下一步，代码放在什么地方。逻辑上应该按照模块来组织函数，
+把你新的 <code class="docutils literal"><span class="pre">before_request</span></code> 和 <code class="docutils literal"><span class="pre">teardown_request</span></code> 装饰的函数放在之前的 <code class="docutils literal"><span class="pre">init_db</span></code> 函数下面（逐行遵照教程）。</p>
+<p class="last">如果你需要短时间找到你的思路，请看看 <a class="reference external" href="http://github.com/mitsuhiko/flask/tree/master/examples/flaskr/">example source</a> 是如何组织的。在 Flask 中，你可以把所有的应用代码放到单个 Python
+模块中。但你无需这么做，并且在你的应用 <a class="reference internal" href="../patterns/packages.html#larger-applications"><em>grows larger</em></a> 的时候，这显然不是个好主意。</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><p class="logo"><a href="../index.html">
+  <img class="logo" src="../_static/flask.png" alt="Logo"/>
+</a></p><h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">教程</a><ul>
+      <li>Previous: <a href="dbinit.html" title="previous chapter">Step 3: 创建数据库</a></li>
+      <li>Next: <a href="views.html" title="next chapter">Step 5: 视图函数</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/tutorial/dbcon.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Armin Ronacher.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+
+    <!-- google 广告 -->
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <!-- pythondoc 首页下方 -->
+    <ins class="adsbygoogle"
+     style="display:inline-block;width:970px;height:90px"
+     data-ad-client="ca-pub-3421553373953599"
+     data-ad-slot="6985889234"></ins>
+    <script>
+    (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+
+
+    <!-- 百度统计 -->
+    <script>
+        var _hmt = _hmt || [];
+        (function() {
+          var hm = document.createElement("script");
+          hm.src = "//hm.baidu.com/hm.js?9adc7a1c86496c8e2bc61c4f8fc92d30";
+          var s = document.getElementsByTagName("script")[0]; 
+          s.parentNode.insertBefore(hm, s);
+        })();
+    </script>
+
+    </div>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block body %}
+  <h2>Register</h2>
+  {% if error %}<p class=error><strong>Error:</strong> {{ error }}{% endif %}
+  <form action="{{ url_for('instance.register') }}" method=post>
+      <br/>
+      <br/>
+      <br/>
+      {{ form.username.label }}{{ form.username }}<br/><br/>
+      {{ form.password.label }}{{ form.password }}<br/><br/>
+      {{ form.submit }}
+      {% for message in get_flashed_messages() %}
+        <div>
+            {{ message }}
+        </div>
+    {% endfor %}
+  </form>
+{% endblock %}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ STATIC_URL}}bootstrap/css/bootstrap.min.css" />
+    <style type="text/css">
+    nav { font-size:20px;color:#fff; padding-top:9px;padding-left:40px; }
+	 .sp1 {float: right;}
+	 body {background:url("{{ STATIC_URL}}image/bg.png") no-repeat 450px 230px fixed; }
+	 ul {list-style:none; margin:0px;padding-left:0px;}
+	 #lists {display:none; width:200px; height:200px; color:blue;font-size:16px;position：absolute；float:left;padding-left:105px}
+	 </style>
+    <title>Articles Index</title>
+</head>
+<body>
+    <nav class="navbar navbar-inverse">
+        {%  if request.user.is_authenticated %}
+	     		||<a href="/articles/index/">首页</a>
+	     		|<a href="#" onclick="show();">文章</a>
+	   
+	     		{% for c in classes %}
+        		|<a href="/articles/articles_list/{{c.id}}">{{ c.name }}</a> 
+        		{% endfor %}|
+       		 <span class="sp1">
+             <a href="/articles/register/">用户注册</a>|
+             <a href="/articles/login/">退出登录</a>|
+             {{ request.user }}
+				</span>
+        {% else %}
+            <a href="/articles/login/">用户登录</a>|
+            <a href="/articles/register/">用户注册</a>|
+        {% endif %}
+    </nav>
+    <div id="lists">
+	 <ul class="list">
+					{% for c in classes %}
+        			<li><a href="/articles/articles_list/{{c.id}}">{{ c.name }}</a> </li>
+        			{% endfor %}   		
+	     		
+	 </ul>
+	</div>
+</body>
+</html>
+<script type="text/javascript">
+var oUl = document.getElementById('lists');
+function show() {
+	(oUl.style.display != 'none') ? oUl.style.display = 'none':oUl.style.display = 'block';
+	
+}
+
+</script>
+

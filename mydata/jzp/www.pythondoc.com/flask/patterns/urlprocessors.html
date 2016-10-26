@@ -1,0 +1,249 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>URL 处理器 &mdash; Flask 0.10.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/flasky.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.10.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Flask 0.10.1 documentation" href="../index.html" />
+    <link rel="up" title="Flask 范例" href="index.html" />
+    <link rel="next" title="使用 Distribute 部署" href="distribute.html" />
+    <link rel="prev" title="实现 API 异常" href="apierrors.html" />
+   
+  
+  <link rel="apple-touch-icon" href="../_static/touch-icon.png" />
+  
+  <link media="only screen and (max-device-width: 480px)" href="../_static/small_flask.css" type= "text/css" rel="stylesheet" />
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="distribute.html" title="使用 Distribute 部署"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="apierrors.html" title="实现 API 异常"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Flask 0.10.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Flask 范例</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="url">
+<h1>URL 处理器<a class="headerlink" href="urlprocessors.html#url" title="Permalink to this headline">¶</a></h1>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 0.7.</span></p>
+</div>
+<p>Flask 0.7 引入了 URL 处理器，其作用是为你处理大量包含相同部分的 URL 。假设你有
+许多 URL 都包含语言代码，但是又不想在每个函数中都重复处理这个语言代码，那么就可
+可以使用 URL 处理器。</p>
+<p>在与蓝图配合使用时， URL 处理器格外有用。下面我们分别演示在应用中和蓝图中使用
+URL 处理器。</p>
+<div class="section" id="id1">
+<h2>国际化的应用 URL<a class="headerlink" href="urlprocessors.html#id1" title="Permalink to this headline">¶</a></h2>
+<p>假设有应用如下:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">g</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s">&#39;/&lt;lang_code&gt;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="n">lang_code</span><span class="p">):</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">lang_code</span> <span class="o">=</span> <span class="n">lang_code</span>
+    <span class="o">...</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s">&#39;/&lt;lang_code&gt;/about&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">about</span><span class="p">(</span><span class="n">lang_code</span><span class="p">):</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">lang_code</span> <span class="o">=</span> <span class="n">lang_code</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>上例中出现了大量的重复：必须在每一个函数中把语言代码赋值给 <a class="reference internal" href="../api.html#flask.g" title="flask.g"><code class="xref py py-data docutils literal"><span class="pre">g</span></code></a>
+对象。当然，如果使用一个装饰器可以简化这个工作。但是，当你需要生成由一个函数
+指向另一个函数的 URL 时，还是得显式地提供语言代码，相当麻烦。</p>
+<p>我们使用 <a class="reference internal" href="../api.html#flask.Flask.url_defaults" title="flask.Flask.url_defaults"><code class="xref py py-func docutils literal"><span class="pre">url_defaults()</span></code></a> 函数来简化这个问题。这个函数可以自动
+把值注入到 <a class="reference internal" href="../api.html#flask.url_for" title="flask.url_for"><code class="xref py py-func docutils literal"><span class="pre">url_for()</span></code></a> 。以下代码检查在 URL 字典中是否存在语言代码，
+端点是否需要一个名为 <code class="docutils literal"><span class="pre">'lang_code'</span></code> 的值:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@app.url_defaults</span>
+<span class="k">def</span> <span class="nf">add_language_code</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="k">if</span> <span class="s">&#39;lang_code&#39;</span> <span class="ow">in</span> <span class="n">values</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">g</span><span class="o">.</span><span class="n">lang_code</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">app</span><span class="o">.</span><span class="n">url_map</span><span class="o">.</span><span class="n">is_endpoint_expecting</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="s">&#39;lang_code&#39;</span><span class="p">):</span>
+        <span class="n">values</span><span class="p">[</span><span class="s">&#39;lang_code&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">lang_code</span>
+</pre></div>
+</div>
+<p>URL 映射的 <a class="reference external" href="http://werkzeug.pocoo.org/docs/routing/#werkzeug.routing.Map.is_endpoint_expecting" title="(in Werkzeug v0.11-dev)"><code class="xref py py-meth docutils literal"><span class="pre">is_endpoint_expecting()</span></code></a> 方法可用于检查
+端点是否需要提供一个语言代码。</p>
+<p>上例的逆向函数是 <a class="reference internal" href="../api.html#flask.Flask.url_value_preprocessor" title="flask.Flask.url_value_preprocessor"><code class="xref py py-meth docutils literal"><span class="pre">url_value_preprocessor()</span></code></a> 。这些函数在请求
+匹配后立即根据 URL 的值执行代码。它们可以从 URL 字典中取出值，并把取出的值放在
+其他地方:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@app.url_value_preprocessor</span>
+<span class="k">def</span> <span class="nf">pull_lang_code</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">lang_code</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;lang_code&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>这样就不必在每个函数中把 <cite>lang_code</cite> 赋值给 <a class="reference internal" href="../api.html#flask.g" title="flask.g"><code class="xref py py-data docutils literal"><span class="pre">g</span></code></a> 了。你还可以作
+进一步改进：写一个装饰器把语言代码作为 URL 的前缀。但是更好的解决方式是使用
+蓝图。一旦 <code class="docutils literal"><span class="pre">'lang_code'</span></code> 从值的字典中弹出，它就不再传送给视图函数了。精简后的
+代码如下:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">g</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<span class="nd">@app.url_defaults</span>
+<span class="k">def</span> <span class="nf">add_language_code</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="k">if</span> <span class="s">&#39;lang_code&#39;</span> <span class="ow">in</span> <span class="n">values</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">g</span><span class="o">.</span><span class="n">lang_code</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">app</span><span class="o">.</span><span class="n">url_map</span><span class="o">.</span><span class="n">is_endpoint_expecting</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="s">&#39;lang_code&#39;</span><span class="p">):</span>
+        <span class="n">values</span><span class="p">[</span><span class="s">&#39;lang_code&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">lang_code</span>
+
+<span class="nd">@app.url_value_preprocessor</span>
+<span class="k">def</span> <span class="nf">pull_lang_code</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">lang_code</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;lang_code&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s">&#39;/&lt;lang_code&gt;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="o">...</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s">&#39;/&lt;lang_code&gt;/about&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">about</span><span class="p">():</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id2">
+<h2>国际化的蓝图 URL<a class="headerlink" href="urlprocessors.html#id2" title="Permalink to this headline">¶</a></h2>
+<p>因为蓝图可以自动给所有 URL 加上一个统一的前缀，所以应用到每个函数就非常方便了。
+更进一步，因为蓝图 URL 预处理器不需要检查 URL 是否真的需要要一个
+<code class="docutils literal"><span class="pre">'lang_code'</span></code> 参数，所以可以去除 <a class="reference internal" href="../api.html#flask.Flask.url_defaults" title="flask.Flask.url_defaults"><code class="xref py py-meth docutils literal"><span class="pre">url_defaults()</span></code></a> 函数中的
+逻辑判断:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Blueprint</span><span class="p">,</span> <span class="n">g</span>
+
+<span class="n">bp</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="s">&#39;frontend&#39;</span><span class="p">,</span> <span class="n">__name__</span><span class="p">,</span> <span class="n">url_prefix</span><span class="o">=</span><span class="s">&#39;/&lt;lang_code&gt;&#39;</span><span class="p">)</span>
+
+<span class="nd">@bp.url_defaults</span>
+<span class="k">def</span> <span class="nf">add_language_code</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="n">values</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s">&#39;lang_code&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">lang_code</span><span class="p">)</span>
+
+<span class="nd">@bp.url_value_preprocessor</span>
+<span class="k">def</span> <span class="nf">pull_lang_code</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">lang_code</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;lang_code&#39;</span><span class="p">)</span>
+
+<span class="nd">@bp.route</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="o">...</span>
+
+<span class="nd">@bp.route</span><span class="p">(</span><span class="s">&#39;/about&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">about</span><span class="p">():</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><p class="logo"><a href="../index.html">
+  <img class="logo" src="../_static/flask.png" alt="Logo"/>
+</a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="urlprocessors.html#">URL 处理器</a><ul>
+<li><a class="reference internal" href="urlprocessors.html#id1">国际化的应用 URL</a></li>
+<li><a class="reference internal" href="urlprocessors.html#id2">国际化的蓝图 URL</a></li>
+</ul>
+</li>
+</ul>
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Flask 范例</a><ul>
+      <li>Previous: <a href="apierrors.html" title="previous chapter">实现 API 异常</a></li>
+      <li>Next: <a href="distribute.html" title="next chapter">使用 Distribute 部署</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/patterns/urlprocessors.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Armin Ronacher.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+
+    <!-- google 广告 -->
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <!-- pythondoc 首页下方 -->
+    <ins class="adsbygoogle"
+     style="display:inline-block;width:970px;height:90px"
+     data-ad-client="ca-pub-3421553373953599"
+     data-ad-slot="6985889234"></ins>
+    <script>
+    (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+
+
+    <!-- 百度统计 -->
+    <script>
+        var _hmt = _hmt || [];
+        (function() {
+          var hm = document.createElement("script");
+          hm.src = "//hm.baidu.com/hm.js?9adc7a1c86496c8e2bc61c4f8fc92d30";
+          var s = document.getElementsByTagName("script")[0]; 
+          s.parentNode.insertBefore(hm, s);
+        })();
+    </script>
+
+    </div>
+  </body>
+</html>

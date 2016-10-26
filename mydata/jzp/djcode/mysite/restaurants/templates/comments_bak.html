@@ -1,0 +1,45 @@
+
+<style>
+ul li {list-style:none;}
+</style>
+<html>
+	<head>
+		<title>Comments</title>
+		<meta charset="utf8">
+	</head>
+	<body>
+		<h2>{{r.name}}的评价</h2>
+	{% if request.user.is_authenticated %}
+
+		{%  if r.comment_set.all %}
+       		 <p>目前共有{{r.comment_set.all|length}}条评价</p>
+		{% endif %}
+		<br/><br/>
+		{% if warm %}
+		<p style="color:red;" id='p' >{{ warm }}</p>
+		<script>
+			alert("您没有操作权限！")
+		</script>
+		{% endif %}
+		{% if f.errors %}
+		{% for f in f.errors%}
+		<p style="color:red;font-size:12px;">*{{f}}输入有误，请重新输入！</p>
+		{% endfor %}
+		{% endif %}
+    <form action="" method="post"> {% csrf_token %}
+        <ul>
+        	{{f.as_ul}}
+	</ul>
+            <input type="submit" value="请给予评价">
+	{% else %}
+        <p>您尚未登录！</p>
+        <a href="/accounts/login/">登录</a>
+        <a href="/accounts/register/">注册</a>
+	{% endif %}
+	</form>
+		
+	</body>
+
+
+
+</html>

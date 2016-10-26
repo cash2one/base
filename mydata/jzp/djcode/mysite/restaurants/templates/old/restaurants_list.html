@@ -1,0 +1,32 @@
+<html>
+	<head>
+		<title>Menu</title>
+		<meta charset='utf-8>'>
+	</head>
+	
+	<body>
+		<h3>Welcome~    {{user_name}}</h3>
+		<h2>餐厅列表</h2>
+		<form action="/menu/" method="get">
+		<table>
+			<tr>
+				<th>选取</th>
+				<th>店名</th>
+				<th>电话</th>
+				<th>地址</th>
+			</tr>
+			{% for r in restaurants %}
+			<tr>
+				<td> <input type="radio" name='id'value="{{r.id}}"></td>
+				<td>{{r.name}}</td>
+				<td>{{r.phone_number}}</td>
+				<td>{{r.address}}</td>
+				<td><a href="/comment/{{r.id}}/">评论<a></td>
+				</tr>
+			{%endfor%}
+		</table>
+
+		<input type="submit" value=" 查看 Menu">
+		</form>
+	</body>
+</html>

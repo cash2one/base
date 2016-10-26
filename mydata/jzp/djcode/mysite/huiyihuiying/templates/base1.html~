@@ -1,0 +1,195 @@
+<!doctype html>
+
+<html>
+
+
+
+<head>
+
+    <meta charset="utf-8">
+
+    <title>慧影医疗主页</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+    <meta content="yes" name="apple-mobile-web-app-capable" />
+
+    <meta content="telephone=no" name="format-detection" />
+
+    <link rel="shortcut icon" href="{{STATIC_URL}}images/favicon.ico" type="image/x-icon" />
+
+    <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/base.css">
+
+    <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/pc.css">
+
+    <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/app.css">
+
+    <script type="text/javascript" src="{{STATIC_URL}}js/j.js"></script>
+
+</head>
+
+
+
+<body>
+
+    <header>
+		<div class="head clearfix">
+
+            <div class="logo clearfix">
+
+                <h1><a href="/hyhy/index/"><img src="{{STATIC_URL}}images/hyyl_logo_03.gif"></a></h1>
+
+            </div>
+
+            <div class="nav"><a href="index.html#">+</a></div>
+
+            <nav class="clearfix">
+
+<!--
+
+                <ul class="clearfix">
+
+                    
+
+                    <li> <a href="http://123.57.190.226/idoctor/html/login.html" target="_blank">前往影像平台</a> </li>
+
+                </ul>
+
+-->
+
+                <ol class="clearfix">
+														
+							{% for l in lanmu%}
+							{% if not l.fid_id%}
+                     <li><a href="/hyhy/new/{{l.id}}/">{{l.name}}</a> 
+                    
+							<div>
+                    {% for x in lanmu %}
+                    
+                    {% if x.fid_id == l.id %}
+                    <a href="/hyhy/new/{{x.id}}" >{{ x.name }}</a>
+							{% endif %}
+							{% endfor %}
+                    </div>
+                    
+
+							
+                     
+                      {% endif %}
+							{% endfor %}
+							</li>
+                </ol>
+
+            </nav>
+
+
+
+        </div>	
+
+
+		{% block banner %}{% endblock %}
+
+    </header>
+
+    
+{% block details %}{% endblock %}
+
+
+
+    <footer>
+		<a name="dibu"></a>
+        <div class="foot wid clearfix">
+
+            <div class="foot_left"><img src="{{STATIC_URL}}images/ewm_03.png"></div>
+
+            <div class="foot_right">
+
+                <h2><em>4008-9090-20</em></h2>
+
+                <div class="clearfix">
+
+                    <ul>
+
+                        <li>中国·北京</li>
+
+                        <li>联系电话：4008-9090-20</li>
+
+                        <li>地址：北京市海淀区西小口路66号中关村东升科技园D3栋207</li>
+
+                        <li>邮编：100000 【工作机会】</li>
+
+                    </ul>
+
+                    <ul>
+
+                        <li>Email：hy@huiyihuiying.com</li>
+
+                        <li>网址：www.huiyihuiying.com</li>
+
+                        <li>Copyright 2015 汇医慧影 版权所有</li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </footer>
+
+ <script type="text/javascript">
+
+var w = $(window).width();
+
+if(w<1000) $('a').attr('target','');
+
+$('#zxyp').mouseenter(function(){
+
+	$(this).find('.zxyp_r').animate({'width':'45%'},800,function(){
+
+		$('#zxyp').find('.zxyp_r').animate({'width':'50%'},800);
+
+	})
+
+})
+
+$('#sjsd').mouseenter(function(){
+
+	$(this).find('img').animate({'padding-left':'35px'},800,function(){
+
+		$('#sjsd').find('img').animate({'padding-left':'95px'},800);
+
+	})
+
+})
+
+</script>
+
+<script>
+
+			var _hmt = _hmt || [];
+
+			(function() {
+
+			  var hm = document.createElement("script");
+
+			  hm.src = "//hm.baidu.com/hm.js?6f118fa0a8deab1ce00c5d0efedac1b6";
+
+			  var s = document.getElementsByTagName("script")[0]; 
+
+			  s.parentNode.insertBefore(hm, s);
+
+			})();
+
+		</script>
+
+</body>
+
+
+
+
+
+</html>
+
+

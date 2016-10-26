@@ -1,0 +1,40 @@
+
+{% extends "stu_base.html" %}
+{% load myfilter %}
+{% block stu_table %}
+<div class="sttop">学员登记表</div>
+
+   <div class="stlist">
+   <table style="text-align: center;" width="900">
+  <tbody>
+  <tr>
+    <td style="border-bottom: 2px solid rgb(255, 102, 0); width: 70px; color: rgb(255, 102, 0); font-size: 16px;" height="60">姓名</td>
+    <td style="border-bottom: 2px solid rgb(255, 102, 0); width: 70px; color: rgb(255, 102, 0); font-size: 16px;">年龄</td>
+    <td style="border-bottom: 2px solid rgb(255, 102, 0); width: 70px; color: rgb(255, 102, 0); font-size: 16px;">性别</td>
+    <td style="border-bottom: 2px solid rgb(255, 102, 0); width: 120px; color: rgb(255, 102, 0); font-size: 16px;">出生日期</td>
+    <td style="border-bottom: 2px solid rgb(255, 102, 0); width: 110px; color: rgb(255, 102, 0); font-size: 16px;">联系方式</td>
+    <td style="border-bottom: 2px solid rgb(255, 102, 0); width: 70px; color: rgb(255, 102, 0); font-size: 16px;">电子邮箱</td>
+    <td style="border-bottom: 2px solid rgb(255, 102, 0); width: 80px; color: rgb(255, 102, 0); font-size: 16px;">学历</td>
+    <td style="border-bottom: 2px solid rgb(255, 102, 0); width: 250px; color: rgb(255, 102, 0); font-size: 16px;">毕业院校</td>
+    <td style="border-bottom: 2px solid rgb(255, 102, 0); width: 100px; color: rgb(255, 102, 0); font-size: 16px;">学员来源</td>
+    <td style="border-bottom: 2px solid rgb(255, 102, 0); width: 60px; color: rgb(255, 102, 0); font-size: 16px;">住宿</td>
+  </tr>
+ {% for s in new_students %}
+    <tr>
+        <td style="width: 70px; color: rgb(255, 102, 0);" height="60">{{ s.name }}</td>
+        <td style="width: 70px;">{{ s.get_age_display }}</td>
+        <td style="width: 70px;">{{ s.get_gender_display }}</td>
+        <td style="width: 120px; overflow: hidden;">{{ s.birth|date:"Y-m" }}</td>
+        <td style="width: 110px; overflow: hidden;">{{ s.phone }}</td>
+        <td style="width: 70px; color: rgb(255, 51, 0);">{{ s.email }}</td>
+        <td style="width: 80px;">{{ s.get_xl_display }}</td>
+        <td style="width: 250px;">{{ s.graduatedfrom }}</td>
+        <td style="width: 100px;">{{ s.get_comefrom_display }}</td>
+        <td style="width: 60px;">{{ s.stay|yes_no:"是/否" }}</td>
+    </tr>
+ {% endfor %}
+</tbody></table>
+
+   </div>
+
+{% endblock %}

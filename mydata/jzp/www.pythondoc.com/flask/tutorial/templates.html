@@ -1,0 +1,223 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Step 6: 模版 &mdash; Flask 0.10.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/flasky.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.10.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Flask 0.10.1 documentation" href="../index.html" />
+    <link rel="up" title="教程" href="index.html" />
+    <link rel="next" title="Step 7: 添加样式" href="css.html" />
+    <link rel="prev" title="Step 5: 视图函数" href="views.html" />
+   
+  
+  <link rel="apple-touch-icon" href="../_static/touch-icon.png" />
+  
+  <link media="only screen and (max-device-width: 480px)" href="../_static/small_flask.css" type= "text/css" rel="stylesheet" />
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="css.html" title="Step 7: 添加样式"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="views.html" title="Step 5: 视图函数"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Flask 0.10.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">教程</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="step-6">
+<span id="tutorial-templates"></span><h1>Step 6: 模版<a class="headerlink" href="templates.html#step-6" title="Permalink to this headline">¶</a></h1>
+<p>现在我们应该开始编写模版。如果我们现在请求 URLs，我们将会得到一个 Flask 无法找到模版的异常。
+模版使用 <a class="reference external" href="http://jinja.pocoo.org/2/documentation/templates">Jinja2</a> 语言以及默认开启自动转义。这就意味着除非你使用 <a class="reference internal" href="../api.html#flask.Markup" title="flask.Markup"><code class="xref py py-class docutils literal"><span class="pre">Markup</span></code></a> 标记或在模板中使用 <code class="docutils literal"><span class="pre">|safe</span></code> 过滤器，
+否则 Jinja2 会确保特殊字符比如 <code class="docutils literal"><span class="pre">&lt;</span></code> 或 <code class="docutils literal"><span class="pre">&gt;</span></code> 被转义成等价的 XML 实体。</p>
+<p>我们也使用模版继承使得在网站的所有页面中重用布局成为可能。</p>
+<p>请把如下的模版放入 <cite>templates</cite> 文件夹：</p>
+<div class="section" id="layout-html">
+<h2>layout.html<a class="headerlink" href="templates.html#layout-html" title="Permalink to this headline">¶</a></h2>
+<p>这个模板包含 HTML 主体结构，标题和一个登录链接（或者当用户已登入则提供注销）。如果有闪现信息的话它也将显示
+闪现信息。<code class="docutils literal"><span class="pre">{%</span> <span class="pre">block</span> <span class="pre">body</span> <span class="pre">%}</span></code> 块能够被子模版中的同样名字( <code class="docutils literal"><span class="pre">body</span></code> )的块替代。</p>
+<p><a class="reference internal" href="../api.html#flask.session" title="flask.session"><code class="xref py py-class docutils literal"><span class="pre">session</span></code></a> 字典在模版中同样可用的，你能用它检查用户是否登录。注意在 Jinja 中你可以访问不存在的对象/字典属性或成员，
+如同下面的代码， 即便 <code class="docutils literal"><span class="pre">'logged_in'</span></code> 键不存在，仍然可以正常工作：</p>
+<div class="highlight-html+jinja"><div class="highlight"><pre><span class="cp">&lt;!doctype html&gt;</span>
+<span class="nt">&lt;title&gt;</span>Flaskr<span class="nt">&lt;/title&gt;</span>
+<span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">stylesheet</span> <span class="na">type=</span><span class="s">text/css</span> <span class="na">href=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">url_for</span><span class="o">(</span><span class="s1">&#39;static&#39;</span><span class="o">,</span> <span class="nv">filename</span><span class="o">=</span><span class="s1">&#39;style.css&#39;</span><span class="o">)</span> <span class="cp">}}</span><span class="s">&quot;</span><span class="nt">&gt;</span>
+<span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">page</span><span class="nt">&gt;</span>
+  <span class="nt">&lt;h1&gt;</span>Flaskr<span class="nt">&lt;/h1&gt;</span>
+  <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">metanav</span><span class="nt">&gt;</span>
+  <span class="cp">{%</span> <span class="k">if</span> <span class="k">not</span> <span class="nv">session.logged_in</span> <span class="cp">%}</span>
+    <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">url_for</span><span class="o">(</span><span class="s1">&#39;login&#39;</span><span class="o">)</span> <span class="cp">}}</span><span class="s">&quot;</span><span class="nt">&gt;</span>log in<span class="nt">&lt;/a&gt;</span>
+  <span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+    <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">url_for</span><span class="o">(</span><span class="s1">&#39;logout&#39;</span><span class="o">)</span> <span class="cp">}}</span><span class="s">&quot;</span><span class="nt">&gt;</span>log out<span class="nt">&lt;/a&gt;</span>
+  <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+  <span class="nt">&lt;/div&gt;</span>
+  <span class="cp">{%</span> <span class="k">for</span> <span class="nv">message</span> <span class="k">in</span> <span class="nv">get_flashed_messages</span><span class="o">()</span> <span class="cp">%}</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">flash</span><span class="nt">&gt;</span><span class="cp">{{</span> <span class="nv">message</span> <span class="cp">}}</span><span class="nt">&lt;/div&gt;</span>
+  <span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+  <span class="cp">{%</span> <span class="k">block</span> <span class="nv">body</span> <span class="cp">%}{%</span> <span class="k">endblock</span> <span class="cp">%}</span>
+<span class="nt">&lt;/div&gt;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="show-entries-html">
+<h2>show_entries.html<a class="headerlink" href="templates.html#show-entries-html" title="Permalink to this headline">¶</a></h2>
+<p>这个模版继承了上面的 <cite>layout.html</cite> 模版用来显示信息。注意 <cite>for</cite> 遍历了所有我们用 <a class="reference internal" href="../api.html#flask.render_template" title="flask.render_template"><code class="xref py py-func docutils literal"><span class="pre">render_template()</span></code></a>
+函数传入的信息。我们同样告诉表单提交到 <cite>add_entry</cite> 函数且使用 <cite>HTTP</cite> 的 <cite>POST</cite> 方法：</p>
+<div class="highlight-html+jinja"><div class="highlight"><pre><span class="cp">{%</span> <span class="k">extends</span> <span class="s2">&quot;layout.html&quot;</span> <span class="cp">%}</span>
+<span class="cp">{%</span> <span class="k">block</span> <span class="nv">body</span> <span class="cp">%}</span>
+  <span class="cp">{%</span> <span class="k">if</span> <span class="nv">session.logged_in</span> <span class="cp">%}</span>
+    <span class="nt">&lt;form</span> <span class="na">action=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">url_for</span><span class="o">(</span><span class="s1">&#39;add_entry&#39;</span><span class="o">)</span> <span class="cp">}}</span><span class="s">&quot;</span> <span class="na">method=</span><span class="s">post</span> <span class="na">class=</span><span class="s">add-entry</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;dl&gt;</span>
+        <span class="nt">&lt;dt&gt;</span>Title:
+        <span class="nt">&lt;dd&gt;&lt;input</span> <span class="na">type=</span><span class="s">text</span> <span class="na">size=</span><span class="s">30</span> <span class="na">name=</span><span class="s">title</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;dt&gt;</span>Text:
+        <span class="nt">&lt;dd&gt;&lt;textarea</span> <span class="na">name=</span><span class="s">text</span> <span class="na">rows=</span><span class="s">5</span> <span class="na">cols=</span><span class="s">40</span><span class="nt">&gt;&lt;/textarea&gt;</span>
+        <span class="nt">&lt;dd&gt;&lt;input</span> <span class="na">type=</span><span class="s">submit</span> <span class="na">value=</span><span class="s">Share</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;/dl&gt;</span>
+    <span class="nt">&lt;/form&gt;</span>
+  <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+  <span class="nt">&lt;ul</span> <span class="na">class=</span><span class="s">entries</span><span class="nt">&gt;</span>
+  <span class="cp">{%</span> <span class="k">for</span> <span class="nv">entry</span> <span class="k">in</span> <span class="nv">entries</span> <span class="cp">%}</span>
+    <span class="nt">&lt;li&gt;&lt;h2&gt;</span><span class="cp">{{</span> <span class="nv">entry.title</span> <span class="cp">}}</span><span class="nt">&lt;/h2&gt;</span><span class="cp">{{</span> <span class="nv">entry.text</span><span class="o">|</span><span class="nf">safe</span> <span class="cp">}}</span>
+  <span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+    <span class="nt">&lt;li&gt;&lt;em&gt;</span>Unbelievable.  No entries here so far<span class="nt">&lt;/em&gt;</span>
+  <span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+  <span class="nt">&lt;/ul&gt;</span>
+<span class="cp">{%</span> <span class="k">endblock</span> <span class="cp">%}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="login-html">
+<h2>login.html<a class="headerlink" href="templates.html#login-html" title="Permalink to this headline">¶</a></h2>
+<p>最后是登录模板，基本上只显示一个允许用户登录的表单：</p>
+<div class="highlight-html+jinja"><div class="highlight"><pre><span class="cp">{%</span> <span class="k">extends</span> <span class="s2">&quot;layout.html&quot;</span> <span class="cp">%}</span>
+<span class="cp">{%</span> <span class="k">block</span> <span class="nv">body</span> <span class="cp">%}</span>
+  <span class="nt">&lt;h2&gt;</span>Login<span class="nt">&lt;/h2&gt;</span>
+  <span class="cp">{%</span> <span class="k">if</span> <span class="nv">error</span> <span class="cp">%}</span><span class="nt">&lt;p</span> <span class="na">class=</span><span class="s">error</span><span class="nt">&gt;&lt;strong&gt;</span>Error:<span class="nt">&lt;/strong&gt;</span> <span class="cp">{{</span> <span class="nv">error</span> <span class="cp">}}{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+  <span class="nt">&lt;form</span> <span class="na">action=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">url_for</span><span class="o">(</span><span class="s1">&#39;login&#39;</span><span class="o">)</span> <span class="cp">}}</span><span class="s">&quot;</span> <span class="na">method=</span><span class="s">post</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;dl&gt;</span>
+      <span class="nt">&lt;dt&gt;</span>Username:
+      <span class="nt">&lt;dd&gt;&lt;input</span> <span class="na">type=</span><span class="s">text</span> <span class="na">name=</span><span class="s">username</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;dt&gt;</span>Password:
+      <span class="nt">&lt;dd&gt;&lt;input</span> <span class="na">type=</span><span class="s">password</span> <span class="na">name=</span><span class="s">password</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;dd&gt;&lt;input</span> <span class="na">type=</span><span class="s">submit</span> <span class="na">value=</span><span class="s">Login</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;/dl&gt;</span>
+  <span class="nt">&lt;/form&gt;</span>
+<span class="cp">{%</span> <span class="k">endblock</span> <span class="cp">%}</span>
+</pre></div>
+</div>
+<p>继续浏览 <a class="reference internal" href="css.html#tutorial-css"><em>Step 7: 添加样式</em></a> 。</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><p class="logo"><a href="../index.html">
+  <img class="logo" src="../_static/flask.png" alt="Logo"/>
+</a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="templates.html#">Step 6: 模版</a><ul>
+<li><a class="reference internal" href="templates.html#layout-html">layout.html</a></li>
+<li><a class="reference internal" href="templates.html#show-entries-html">show_entries.html</a></li>
+<li><a class="reference internal" href="templates.html#login-html">login.html</a></li>
+</ul>
+</li>
+</ul>
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">教程</a><ul>
+      <li>Previous: <a href="views.html" title="previous chapter">Step 5: 视图函数</a></li>
+      <li>Next: <a href="css.html" title="next chapter">Step 7: 添加样式</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/tutorial/templates.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Armin Ronacher.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+
+    <!-- google 广告 -->
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <!-- pythondoc 首页下方 -->
+    <ins class="adsbygoogle"
+     style="display:inline-block;width:970px;height:90px"
+     data-ad-client="ca-pub-3421553373953599"
+     data-ad-slot="6985889234"></ins>
+    <script>
+    (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+
+
+    <!-- 百度统计 -->
+    <script>
+        var _hmt = _hmt || [];
+        (function() {
+          var hm = document.createElement("script");
+          hm.src = "//hm.baidu.com/hm.js?9adc7a1c86496c8e2bc61c4f8fc92d30";
+          var s = document.getElementsByTagName("script")[0]; 
+          s.parentNode.insertBefore(hm, s);
+        })();
+    </script>
+
+    </div>
+  </body>
+</html>

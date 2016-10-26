@@ -1,0 +1,64 @@
+{% extends "base1.html"%}
+
+{% block banner %}
+<div class="banner2 clearfix">
+				<div class="ban_tu wid clearfix"><img src="{{STATIC_URL}}images/xban.png">
+						<div class="tact">
+								<h2>静静倾听<br>
+										患者的声音</h2>
+								<p>倾听患者故事，学习就诊经验<br>
+										参考患者对我们的真实看法</p>
+								<a href="#dibu">联系我们</a> </div>
+				</div>
+</div>
+
+{% endblock %} 
+{% block details %}
+
+<div class="con wid">
+
+        <div class="weizhi list_weizhi">
+
+                          <a href="/hyhy/index/" class="first">首页<i></i></a>
+
+                           
+									{% if current_lanmu.fid %}
+                          <a href="/hyhy/new/{{current_lanmu.fid.id}}/"><b></b>{{current_lanmu.fid}}<i></i></a>
+									{% endif %}
+								  <a href="/hyhy/new/{{current_lanmu.id}}/"><b></b>{{current_lanmu.name}}<i></i></a>
+                        </div>
+
+		<h2>{{current_lanmu.name}}</h2>
+
+       
+
+          
+		{% for i in a %}
+		<div class="text1 clearfix">
+
+                <h2>			
+                <span>{{cname}}</span>					
+                <a href="/hyhy/article/{{i.id}}/">{{i.title}}</a></h2>
+
+				<div class="tu"><a href="/hyhy/article/{{i.id}}/"><img src="/media/{{i.image1}}/" ></a></div>
+
+				<div class="text">
+
+						<p><a href="/hyhy/article/{{i.id}}/" class="list_a1">{{i.description}}</a><br><a href="/hyhy/article/{{i.id}}" class="list_a2">阅读全文></a></p>
+
+                        <div class="clearfix"><span>汇医慧影</span><strong class="riqi">{{i.date|date:'Y-m-d'}}</strong></div>	
+
+				</div>
+
+		</div>
+		{% endfor %}
+        
+
+
+        
+
+        
+
+</div>
+
+{% endblock %}
